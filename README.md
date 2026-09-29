@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Oh So Coco — website
 
-## Getting Started
+V1 landing page for Oh So Coco, a custom chocolate-covered treats business in
+Orange County, NY. Built with Next.js 16, TypeScript, and Tailwind CSS 4.
 
-First, run the development server:
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Edit content
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Everything on the page comes from one file: `src/content/site.ts`.
 
-## Learn More
+- `site` — name, tagline, email, Instagram links, service area, and the
+  **current drop** banner (`currentDrop.enabled` hides it).
+- `productLines` — the treat tiles. Add `image: "/products/<file>"` once real
+  photos are in `public/products/`.
+- `occasions`, `howToOrder`, `faq` — the remaining sections.
 
-To learn more about Next.js, take a look at the following resources:
+Lines marked `CONFIRM` were not visible on the public Instagram profile and
+should be checked with the owner before launch.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Email signup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The form posts JSON to `NEXT_PUBLIC_SUBSCRIBE_ENDPOINT` (Formspree, Mailchimp,
+Zapier, Make, etc.) when that is set. Without it, submitting opens a pre-filled
+email to the business address so no signup is lost. For GitHub Pages, set a
+repository variable named `SUBSCRIBE_ENDPOINT` and the workflow passes it in.
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The site is a static export (`output: "export"`) published to GitHub Pages by
+`.github/workflows/deploy.yml` on every push to `main`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+https://jasontaylorlabs.github.io/ohsococo/
+
+`NEXT_PUBLIC_BASE_PATH` is `/ohsococo` for the project-site URL. When a custom
+domain is attached, clear it and update `site.url` in `src/content/site.ts`.
+
+## Roadmap
+
+See the PRD for V2 (menu, gallery, custom request form, CMS), V3 (paid preorder
+drops), and V4 (online-paid quotes, admin).

@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-cocoa-950: #2a170d;
+  --color-cocoa-900: #3e2416;
+  --color-cocoa-800: #5c3a21;
+  --color-cocoa-700: #7a4d2b;
+  --color-cocoa-600: #9a6a45;
+  --color-cocoa-200: #e6d3c1;
+  --color-cream-50: #fffcf7;
+  --color-cream-100: #fbf3e6;
+  --color-cream-200: #f4e6d0;
+  --color-cream-300: #ead8ba;
+  --color-pink-500: #e85d8a;
+  --color-pink-600: #d4467a;
+  --color-gold-400: #e4b95c;
+  --color-gold-500: #d9a441;
+
+  --font-display: var(--font-fredoka);
+  --font-sans: var(--font-nunito);
+
+  --radius-blob: 2rem;
+  --shadow-soft: 0 10px 30px -12px rgb(62 36 22 / 0.25);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream-50);
+  color: var(--color-cocoa-900);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
+}
+
+/* Native <details> accordion: hide the default marker */
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details[open] .faq-chevron {
+  transform: rotate(180deg);
+}
+
+@keyframes drip {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+.animate-drip {
+  animation: drip 3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-drip {
+    animation: none;
+  }
 }
