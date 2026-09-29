@@ -2,11 +2,9 @@ import { ImageResponse } from "next/og";
 export const dynamic = "force-static";
 import { site } from "@/content/site";
 
-export const alt = `${site.name} - ${site.tagline}`;
-export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+const size = { width: 1200, height: 630 };
 
-export default function OpenGraphImage() {
+export function GET() {
   return new ImageResponse(
     (
       <div
