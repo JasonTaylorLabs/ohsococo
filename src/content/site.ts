@@ -102,6 +102,28 @@ export const productLines: ProductLine[] = [
   },
 ];
 
+export type GalleryItem = {
+  caption: string;
+  /** Shown on the placeholder tile until a real photo exists. */
+  emoji: string;
+  /** Path under /public, e.g. "/products/ring-pops.jpg". Square, at least 1200x1200. */
+  image?: string;
+  /** Alt text for the photo. Falls back to the caption. */
+  alt?: string;
+};
+
+/** Gallery tiles, in display order. Leave the list empty to hide the section. */
+export const gallery: GalleryItem[] = [
+  { caption: "Ring Pop cake pops", emoji: "💍" },
+  { caption: "Birthday cake pops", emoji: "🎂" },
+  { caption: "Teddy bear cakesicles", emoji: "🧸" },
+  { caption: "Chocolate-covered Oreos", emoji: "🍪" },
+  { caption: "Mini donuts", emoji: "🍩" },
+  { caption: "Halloween eyeballs", emoji: "🎃" },
+  { caption: "Baby shower set", emoji: "🍼" },
+  { caption: "Party favor boxes", emoji: "🎁" },
+];
+
 export const occasions = [
   { name: "Birthdays", emoji: "🎂" },
   { name: "Baby showers", emoji: "🧸" },

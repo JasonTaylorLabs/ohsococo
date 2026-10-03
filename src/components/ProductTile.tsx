@@ -2,7 +2,7 @@ import Image from "next/image";
 import type { ProductLine } from "@/content/site";
 import { asset } from "@/lib/paths";
 
-const tints = [
+export const tints = [
   "from-pink-500/25 to-cream-200",
   "from-gold-400/35 to-cream-200",
   "from-cocoa-600/30 to-cream-200",

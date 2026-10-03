@@ -1,8 +1,9 @@
 import Image from "next/image";
+import { Gallery } from "@/components/Gallery";
 import { InstagramButton } from "@/components/InstagramButton";
 import { ProductTile } from "@/components/ProductTile";
 import { SignupForm } from "@/components/SignupForm";
-import { faq, howToOrder, occasions, productLines, site } from "@/content/site";
+import { faq, gallery, howToOrder, occasions, productLines, site } from "@/content/site";
 import { asset } from "@/lib/paths";
 
 function Section({
@@ -54,6 +55,9 @@ export default function Home() {
           </a>
           <nav className="hidden items-center gap-6 text-sm font-bold text-cocoa-800 md:flex" aria-label="Sections">
             <a href="#treats" className="hover:text-pink-500">Treats</a>
+            {gallery.length > 0 && (
+              <a href="#gallery" className="hover:text-pink-500">Gallery</a>
+            )}
             <a href="#occasions" className="hover:text-pink-500">Occasions</a>
             <a href="#how" className="hover:text-pink-500">How to order</a>
             <a href="#faq" className="hover:text-pink-500">FAQ</a>
@@ -149,6 +153,18 @@ export default function Home() {
             message.
           </p>
         </Section>
+
+        {/* Gallery */}
+        {gallery.length > 0 && (
+          <Section id="gallery" eyebrow="Fresh from the kitchen" title="Gallery">
+            <Gallery items={gallery} />
+            <div className="mt-10 flex justify-center">
+              <InstagramButton variant="secondary" href={site.instagram.url}>
+                See more on Instagram
+              </InstagramButton>
+            </div>
+          </Section>
+        )}
 
         {/* Occasions */}
         <Section id="occasions" eyebrow="Made for" title="Every occasion worth celebrating" className="bg-cream-100">
