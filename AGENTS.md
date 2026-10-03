@@ -16,3 +16,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Before requesting merge, all of these pass locally and in CI: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, `npm run test:e2e`.
 - A bug fix includes a test that failed before the fix. Do not delete or skip tests, or loosen a check, to make a PR pass.
 - End-to-end tests run against the static export in `out/`, built with an empty `NEXT_PUBLIC_BASE_PATH`.
+- Every PR into `dev` gets a preview at `https://jasontaylorlabs.github.io/ohsococo/pr-preview/pr-<number>/`. The stable dev build is at `/ohsococo/dev/`. Production is `/ohsococo/`. All three publish from the `gh-pages` branch; never edit that branch by hand.
