@@ -1,43 +1,84 @@
-name: Deploy to GitHub Pages
+name: Deploy
+
+# One GitHub Pages site, three kinds of build, all published from the gh-pages branch:
+#   main        -> /ohsococo/                  (production)
+#   dev         -> /ohsococo/dev/              (stable dev build)
+#   PR into dev -> /ohsococo/pr-preview/pr-N/  (removed when the PR closes)
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    branches: [dev]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
+  pull-requests: write
 
+# Every deploy pushes to gh-pages, so run them one at a time.
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: gh-pages
+  cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Pick the base path for this build
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base=/ohsococo/pr-preview/pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+            echo "kind=preview" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            echo "base=/ohsococo" >> "$GITHUB_OUTPUT"
+            echo "kind=production" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref_name }}" = "dev" ]; then
+            echo "base=/ohsococo/dev" >> "$GITHUB_OUTPUT"
+            echo "kind=dev" >> "$GITHUB_OUTPUT"
+          else
+            echo "Deploys only run for main, dev, and PRs into dev." && exit 1
+          fi
+
       - uses: actions/setup-node@v4
+        if: github.event.action != 'closed'
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+        if: github.event.action != 'closed'
       - run: npm run build
+        if: github.event.action != 'closed'
         env:
-          NEXT_PUBLIC_BASE_PATH: /ohsococo
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.target.outputs.base }}
           NEXT_PUBLIC_SUBSCRIBE_ENDPOINT: ${{ vars.SUBSCRIBE_ENDPOINT }}
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: out
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish production
+        if: steps.target.outputs.kind == 'production'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: out
+          clean-exclude: |
+            dev
+            pr-preview
+
+      - name: Publish dev
+        if: steps.target.outputs.kind == 'dev'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: out
+          target-folder: dev
+
+      - name: Publish or remove PR preview
+        if: steps.target.outputs.kind == 'preview'
+        uses: rossjrw/pr-preview-action@v1
+        with:
+          source-dir: out
+          preview-branch: gh-pages
+          umbrella-dir: pr-preview
