@@ -1,0 +1,32 @@
+name: Task
+description: A unit of work an agent can finish without asking questions.
+labels: ["inbox"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What a visitor or the owner can do when this is finished, in one sentence.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: A checklist the verifier can test one line at a time.
+      value: "- [ ] "
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What not to touch.
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk
+      description: low may auto-merge to dev. medium needs approval. high needs an approved plan before code.
+      options: [low, medium, high]
+    validations:
+      required: true
