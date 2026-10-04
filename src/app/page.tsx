@@ -69,7 +69,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main id="top" className="flex-1">
+      <main id="top" className="flex-1 scroll-mt-24">
         {/* Hero */}
         <section className="relative overflow-hidden px-4 pb-14 pt-12 sm:pt-20">
           <div
