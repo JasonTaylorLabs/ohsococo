@@ -14,10 +14,13 @@ export function InstagramButton({
   children,
   variant = "primary",
   className = "",
+  href = site.instagram.dmUrl,
 }: {
   children: React.ReactNode;
   variant?: "primary" | "secondary";
   className?: string;
+  /** Defaults to the DM link, since most buttons are "order" calls to action. */
+  href?: string;
 }) {
   const base =
     "inline-flex h-14 items-center justify-center gap-2 rounded-full px-7 text-base font-bold shadow-soft transition focus:outline-none focus:ring-4 focus:ring-pink-500/30";
@@ -26,7 +29,7 @@ export function InstagramButton({
       ? "bg-pink-500 text-white hover:bg-pink-600"
       : "bg-white text-cocoa-900 ring-2 ring-cocoa-200 hover:bg-cream-100";
   return (
-    <a href={site.instagram.dmUrl} target="_blank" rel="noopener noreferrer" className={`${base} ${styles} ${className}`}>
+    <a href={href} target="_blank" rel="noopener noreferrer" className={`${base} ${styles} ${className}`}>
       <InstagramIcon />
       {children}
     </a>
