@@ -52,6 +52,25 @@ test("an empty gallery list hides the section and its nav link", async ({ page }
   await expect(page.locator('header nav a[href="#gallery"]')).toHaveCount(0);
 });
 
+test("scroll to #top lands below the sticky header", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight || 1));
+  await page.locator('header > div > a[href="#top"]').click();
+  // Poll until #top stops moving above viewport (scroll has settled)
+  const mainTop = await page.locator('main#top').evaluate((el) => el.getBoundingClientRect().top);
+  expect(mainTop).toBeGreaterThan(0);
+});
+
+test("pressing skip-to-content lands below the sticky header", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("Tab");
+  const link = page.getByRole("link", { name: "Skip to content" });
+  await link.focus();
+  await page.keyboard.press("Enter");
+  const mainTop = await page.locator('main#top').evaluate((el) => el.getBoundingClientRect().top);
+  expect(mainTop).toBeGreaterThan(0);
+});
+
 test("gallery shows a tile per content item, in order, between the menu and occasions", async ({ page }) => {
   test.skip(gallery.length === 0, "gallery is empty");
   await page.goto("/");
