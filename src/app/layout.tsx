@@ -6,11 +6,13 @@ import "./globals.css";
 
 const fredoka = localFont({
   src: "./fonts/Fredoka-Variable.woff2",
+  weight: "300 700",
   variable: "--font-fredoka",
 });
 
 const nunito = localFont({
   src: "./fonts/Nunito-Variable.woff2",
+  weight: "200 1000",
   variable: "--font-nunito",
 });
 
