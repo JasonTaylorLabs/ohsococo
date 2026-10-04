@@ -26,7 +26,7 @@ export function InstagramButton({
     "inline-flex h-14 items-center justify-center gap-2 rounded-full px-7 text-base font-bold shadow-soft transition focus:outline-none focus:ring-4 focus:ring-pink-500/30";
   const styles =
     variant === "primary"
-      ? "bg-pink-500 text-white hover:bg-pink-600"
+      ? "bg-pink-700 text-white hover:bg-pink-800"
       : "bg-white text-cocoa-900 ring-2 ring-cocoa-200 hover:bg-cream-100";
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" className={`${base} ${styles} ${className}`}>
