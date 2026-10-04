@@ -11,7 +11,7 @@ export default defineConfig({
     { name: "phone", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: "python3 -m http.server 4173 -d out",
+    command: "python3 tests/e2e/serve.py 4173 out",
     url: "http://localhost:4173",
     reuseExistingServer: !process.env.CI,
   },

@@ -36,6 +36,19 @@ test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
   await expect(link).toHaveAttribute("href", /#top$/);
 });
 
+test("on the 404 page, the skip link's target exists", async ({ page }) => {
+  const response = await page.goto("/does-not-exist/");
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle(/^Page not found/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
+  await page.keyboard.press("Tab");
+  const link = page.getByRole("link", { name: "Skip to content" });
+  await expect(link).toBeFocused();
+  await expect(link).toHaveAttribute("href", /#top$/);
+  await expect(page.locator("#top")).toHaveCount(1);
+  await expect(page.locator("#top").getByRole("link", { name: "Back to the homepage" })).toHaveAttribute("href", "/");
+});
+
 test("no console errors or failed requests on load", async ({ page }) => {
   const problems: string[] = [];
   page.on("console", (m) => m.type() === "error" && problems.push(m.text()));
