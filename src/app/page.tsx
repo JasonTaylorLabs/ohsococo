@@ -122,7 +122,7 @@ export default function Home() {
                 />
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                   <div className="max-w-2xl">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-pink-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                    <span className="inline-flex items-center gap-2 rounded-full bg-pink-700 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
                       <span className="h-2 w-2 animate-pulse rounded-full bg-white" aria-hidden="true" />
                       {site.currentDrop.label}
                     </span>
