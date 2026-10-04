@@ -64,7 +64,8 @@ test("each font renders real weights, not a faked bold", async ({ page }) => {
   const widths = await page.evaluate(async () => {
     const root = getComputedStyle(document.documentElement);
     const measure = async (variable: string, weights: number[]) => {
-      const family = root.getPropertyValue(variable).trim();
+      // Only the self-hosted face: next/font's "<name> Fallback" face is local(Arial), which CI lacks.
+      const family = root.getPropertyValue(variable).split(",")[0].trim();
       const ctx = document.createElement("canvas").getContext("2d")!;
       const out: number[] = [];
       for (const w of weights) {
