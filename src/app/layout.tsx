@@ -74,7 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fredoka.variable} ${nunito.variable} antialiased`}>
       <body className="flex min-h-screen flex-col">
-        <a href="#top" className="sr-only focus:not-sr-only focus:z-50 focus:fixed focus:mt-4 focus:left-4 focus:rounded focus:bg-pink-500 focus:px-4 focus:py-2 focus:text-white">
+        <a href="#top" className="sr-only focus:not-sr-only focus:z-50 focus:fixed focus:mt-4 focus:left-4 focus:rounded focus:bg-pink-700 focus:px-4 focus:py-2 focus:text-white">
           Skip to content
         </a>
         <script
