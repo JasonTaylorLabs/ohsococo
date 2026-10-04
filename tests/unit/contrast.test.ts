@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "../..");
 const globalsCss = readFileSync(path.join(root, "src/app/globals.css"), "utf-8");
 const instagramButtonSource = readFileSync(path.join(root, "src/components/InstagramButton.tsx"), "utf-8");
 const pageSource = readFileSync(path.join(root, "src/app/page.tsx"), "utf-8");
+const layoutSource = readFileSync(path.join(root, "src/app/layout.tsx"), "utf-8");
 
 function readToken(name: string): string {
   const match = globalsCss.match(new RegExp(`--color-${name}:\\s*(#[0-9a-fA-F]{6})`));
@@ -48,5 +49,10 @@ describe("pink token contrast against white text (WCAG AA, Issue #9)", () => {
   it("the current-drop badge uses the same AA-passing shade as the button's default state", () => {
     const badgeMatch = pageSource.match(/rounded-full bg-pink-(\d+) px-3 py-1 text-xs font-bold uppercase tracking-wider text-white/);
     expect(badgeMatch?.[1]).toBe("700");
+  });
+
+  it("skip-to-content link uses pink-700 for AA-passing focus background", () => {
+    const skipLinkClass = layoutSource.match(/sr-only[^>]*focus:bg-pink-(\d+)/)?.[1];
+    expect(skipLinkClass).toBe("700");
   });
 });
