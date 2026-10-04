@@ -81,4 +81,32 @@ describe("subsiteNotFoundPath", () => {
       expect(fn("/dev/nope/", "")).toBe("/dev/404.html");
     });
   });
+
+  describe("only exact sub-site prefixes match", () => {
+    it.each([
+      "/ohsococo/pr-preview/pr-17abc/x/",
+      "/ohsococo/pr-preview/pr-17-old/",
+      "/ohsococo/pr-preview/pr-17",
+      "/ohsococo/dev",
+      "/ohsococo/developer/",
+      "/abcdefgh/dev/x/",
+      "/ohsococoX/dev/x/",
+    ])("%s → null", async (pathname) => {
+      const fn = await loadNotFoundPath("/ohsococo");
+      expect(fn(pathname, "/ohsococo")).toBeNull();
+    });
+  });
+
+  describe("default basePath comes from NEXT_PUBLIC_BASE_PATH", () => {
+    it("uses the env base when none is passed", async () => {
+      const fn = await loadNotFoundPath("/ohsococo");
+      expect(fn("/ohsococo/dev/nope/")).toBe("/ohsococo/dev/404.html");
+      expect(fn("/dev/nope/")).toBeNull();
+    });
+
+    it("falls back to an empty base when the env is unset", async () => {
+      const fn = await loadNotFoundPath();
+      expect(fn("/pr-preview/pr-5/x/")).toBe("/pr-preview/pr-5/404.html");
+    });
+  });
 });
