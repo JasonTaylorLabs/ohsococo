@@ -27,6 +27,12 @@ test("signup rejects an invalid email", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
 });
 
+test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
+  await page.goto("/");
+  await page.keyboard.press("Tab");
+  const link = page.locator("a").filter({ hasText: "Skip to content" });
+  expect(await link.first().getAttribute("href")).toContain("#top");
+
 test("no console errors or failed requests on load", async ({ page }) => {
   const problems: string[] = [];
   page.on("console", (m) => m.type() === "error" && problems.push(m.text()));
