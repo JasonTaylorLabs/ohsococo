@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { gallery, site } from "../../src/content/site";
 
 test("landing page renders the brand and tagline", async ({ page }) => {
@@ -52,20 +52,30 @@ test("an empty gallery list hides the section and its nav link", async ({ page }
   await expect(page.locator('header nav a[href="#gallery"]')).toHaveCount(0);
 });
 
-test("scroll to #top lands below the sticky header", async ({ page }) => {
-  await page.goto("/#top");
-  // Use poll so we wait for Playwright's frame to catch up with scroll position
-  await expect.poll(() => page.locator('main#top').evaluate(el => el.getBoundingClientRect().top), { timeout: 5000 }).toBeGreaterThan(0);
+// How far the top of <main> sits below the sticky header's bottom edge; negative means hidden under it.
+// Scrolling is smooth, so callers poll this until it settles.
+function mainClearance(page: Page) {
+  return page.evaluate(
+    () =>
+      document.querySelector("main#top")!.getBoundingClientRect().top -
+      document.querySelector("header")!.getBoundingClientRect().bottom,
+  );
+}
+
+test("clicking the logo from further down shows the top of main below the sticky header", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => window.scrollTo({ top: 2000, behavior: "instant" }));
+  await page.locator('header a[href="#top"]').click();
+  await expect.poll(() => mainClearance(page)).toBeGreaterThanOrEqual(0);
 });
 
-test("pressing skip-to-content lands below the sticky header", async ({ page }) => {
+test("activating skip-to-content from further down shows the top of main below the sticky header", async ({ page }) => {
   await page.goto("/");
+  await page.evaluate(() => window.scrollTo({ top: 2000, behavior: "instant" }));
   await page.keyboard.press("Tab");
-  const link = page.getByRole("link", { name: "Skip to content" });
-  await link.focus();
-  await page.waitForTimeout(100);
-  const mainTop = await page.locator('main#top').evaluate((el) => el.getBoundingClientRect().top);
-  expect(mainTop).toBeGreaterThan(0);
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => mainClearance(page)).toBeGreaterThanOrEqual(0);
 });
 
 test("gallery shows a tile per content item, in order, between the menu and occasions", async ({ page }) => {
