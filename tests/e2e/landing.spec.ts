@@ -36,6 +36,23 @@ test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
   await expect(link).toHaveAttribute("href", /#top$/);
 });
 
+test("order button and drop badge use an AA-contrast pink background", async ({ page }) => {
+  await page.goto("/");
+  const orderButton = page.getByRole("link", { name: "Order on Instagram" }).first();
+  await expect(orderButton).toHaveCSS("background-color", "rgb(196, 61, 112)");
+
+  const badge = page.getByText(site.currentDrop.label);
+  await expect(badge).toHaveCSS("background-color", "rgb(196, 61, 112)");
+});
+
+test("order button hover state uses a darker AA-contrast pink background", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "phone", "no hover on touch devices");
+  await page.goto("/");
+  const orderButton = page.getByRole("link", { name: "Order on Instagram" }).first();
+  await orderButton.hover();
+  await expect(orderButton).toHaveCSS("background-color", "rgb(168, 50, 93)");
+});
+
 test("no console errors or failed requests on load", async ({ page }) => {
   const problems: string[] = [];
   page.on("console", (m) => m.type() === "error" && problems.push(m.text()));
