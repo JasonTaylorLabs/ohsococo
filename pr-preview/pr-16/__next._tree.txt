@@ -1,4 +1,0 @@
-:HL["/ohsococo/pr-preview/pr-16/_next/static/chunks/0e8ar2ohnnga7.css","style"]
-:HL["/ohsococo/pr-preview/pr-16/_next/static/media/Fredoka_Variable-s.p.2_8zey5e0wa7e.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-:HL["/ohsococo/pr-preview/pr-16/_next/static/media/Nunito_Variable-s.p.1wzrasd95pxo_.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}},"staleTime":300,"buildId":"jyTxk6TcyL6m9xhkeATQD"}
