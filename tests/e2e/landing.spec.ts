@@ -49,6 +49,13 @@ test("on the 404 page, the skip link's target exists", async ({ page }) => {
   await expect(page.locator("#top").getByRole("link", { name: "Back to the homepage" })).toHaveAttribute("href", "/");
 });
 
+test("sub-site bad URL redirects to its own 404.html", async ({ page }) => {
+  await page.goto("/pr-preview/pr-999/does-not-exist/");
+  // The redirect should happen within a second (useEffect + replace)
+  await expect.poll(() => page.url()).toContain("pr-999/404.html");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
+});
+
 test("no console errors or failed requests on load", async ({ page }) => {
   const problems: string[] = [];
   page.on("console", (m) => m.type() === "error" && problems.push(m.text()));
