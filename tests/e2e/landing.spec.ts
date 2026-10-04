@@ -49,6 +49,18 @@ test("on the 404 page, the skip link's target exists", async ({ page }) => {
   await expect(page.locator("#top").getByRole("link", { name: "Back to the homepage" })).toHaveAttribute("href", "/");
 });
 
+test("sub-site bad URL redirects to its own 404.html", async ({ page }) => {
+  await page.goto("/pr-preview/pr-999/does-not-exist/");
+  await page.waitForURL("**/pr-preview/pr-999/404.html");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
+  // pr-999 doesn't exist locally, so the server answers with the root 404.html again; the loop guard must stop there.
+  let navigations = 0;
+  page.on("framenavigated", (frame) => frame === page.mainFrame() && navigations++);
+  await page.waitForTimeout(1000);
+  expect(navigations).toBe(0);
+  expect(new URL(page.url()).pathname).toBe("/pr-preview/pr-999/404.html");
+});
+
 test("no console errors or failed requests on load", async ({ page }) => {
   const problems: string[] = [];
   page.on("console", (m) => m.type() === "error" && problems.push(m.text()));
