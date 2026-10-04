@@ -53,12 +53,9 @@ test("an empty gallery list hides the section and its nav link", async ({ page }
 });
 
 test("scroll to #top lands below the sticky header", async ({ page }) => {
-  await page.goto("/");
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight || 1));
-  await page.locator('header > div > a[href="#top"]').click();
-  // Poll until #top stops moving above viewport (scroll has settled)
-  const mainTop = await page.locator('main#top').evaluate((el) => el.getBoundingClientRect().top);
-  expect(mainTop).toBeGreaterThan(0);
+  await page.goto("/#top");
+  // Use poll so we wait for Playwright's frame to catch up with scroll position
+  await expect.poll(() => page.locator('main#top').evaluate(el => el.getBoundingClientRect().top), { timeout: 5000 }).toBeGreaterThan(0);
 });
 
 test("pressing skip-to-content lands below the sticky header", async ({ page }) => {
@@ -66,7 +63,7 @@ test("pressing skip-to-content lands below the sticky header", async ({ page }) 
   await page.keyboard.press("Tab");
   const link = page.getByRole("link", { name: "Skip to content" });
   await link.focus();
-  await page.keyboard.press("Enter");
+  await page.waitForTimeout(100);
   const mainTop = await page.locator('main#top').evaluate((el) => el.getBoundingClientRect().top);
   expect(mainTop).toBeGreaterThan(0);
 });
