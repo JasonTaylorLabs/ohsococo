@@ -45,6 +45,46 @@ test("no console errors or failed requests on load", async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
+test("fonts are self-hosted, not fetched from Google", async ({ page }) => {
+  const fontRequests: string[] = [];
+  page.on("request", (r) => r.resourceType() === "font" && fontRequests.push(r.url()));
+  const googleRequests: string[] = [];
+  page.on("request", (r) => /fonts\.(googleapis|gstatic)\.com/.test(r.url()) && googleRequests.push(r.url()));
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  expect(googleRequests).toEqual([]);
+  expect(fontRequests.length).toBeGreaterThan(0);
+  for (const url of fontRequests) expect(new URL(url).origin).toBe(new URL(page.url()).origin);
+});
+
+test("each font renders real weights, not a faked bold", async ({ page }) => {
+  await page.goto("/");
+  // A browser fakes a missing weight by smearing the regular glyphs, which keeps text width the same.
+  // Real weights have their own glyphs, so the same string measures differently at each weight.
+  const widths = await page.evaluate(async () => {
+    const root = getComputedStyle(document.documentElement);
+    const measure = async (variable: string, weights: number[]) => {
+      // Only the self-hosted face: next/font's "<name> Fallback" face is local(Arial), which CI lacks.
+      const family = root.getPropertyValue(variable).split(",")[0].trim();
+      const ctx = document.createElement("canvas").getContext("2d")!;
+      const out: number[] = [];
+      for (const w of weights) {
+        await document.fonts.load(`${w} 48px ${family}`);
+        ctx.font = `${w} 48px ${family}`;
+        out.push(ctx.measureText("Chocolate-covered treats & more").width);
+      }
+      return out;
+    };
+    return {
+      fredoka: await measure("--font-fredoka", [500, 600, 700]),
+      nunito: await measure("--font-nunito", [400, 600, 700, 800]),
+    };
+  });
+  for (const list of Object.values(widths)) {
+    expect(new Set(list.map((w) => w.toFixed(2))).size).toBe(list.length);
+  }
+});
+
 test("an empty gallery list hides the section and its nav link", async ({ page }) => {
   test.skip(gallery.length > 0, "gallery has items");
   await page.goto("/");
