@@ -50,8 +50,10 @@ describe("pink token contrast against white text (WCAG AA, Issue #9)", () => {
     const badgeMatch = pageSource.match(/rounded-full bg-pink-(\d+) px-3 py-1 text-xs font-bold uppercase tracking-wider text-white/);
     expect(badgeMatch?.[1]).toBe("700");
   });
+});
 
-  it("skip-to-content link uses pink-700 for AA-passing focus background", () => {
+describe("skip-to-content link contrast (WCAG AA, Issue #13)", () => {
+  it("uses the AA-passing pink-700 for its focus background", () => {
     const skipLinkClass = layoutSource.match(/sr-only[^>]*focus:bg-pink-(\d+)/)?.[1];
     expect(skipLinkClass).toBe("700");
   });
