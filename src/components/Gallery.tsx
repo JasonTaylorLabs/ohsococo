@@ -13,7 +13,7 @@ export function Gallery({ items }: { items: GalleryItem[] }) {
               {item.image ? (
                 <Image
                   src={asset(item.image)}
-                  alt={item.alt ?? item.caption}
+                  alt={item.alt ?? ""}
                   fill
                   loading="lazy"
                   sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"

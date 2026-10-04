@@ -108,7 +108,7 @@ export type GalleryItem = {
   emoji: string;
   /** Path under /public, e.g. "/products/ring-pops.jpg". Square, at least 1200x1200. */
   image?: string;
-  /** Alt text for the photo. Falls back to the caption. */
+  /** Describes what the photo shows beyond the caption. Leave unset if the caption says it all. */
   alt?: string;
 };
 
