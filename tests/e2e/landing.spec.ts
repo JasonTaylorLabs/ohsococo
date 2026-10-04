@@ -39,6 +39,7 @@ test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
 test("on the 404 page, the skip link's target exists", async ({ page }) => {
   const response = await page.goto("/does-not-exist/");
   expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle(/^Page not found/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
   await page.keyboard.press("Tab");
   const link = page.getByRole("link", { name: "Skip to content" });
