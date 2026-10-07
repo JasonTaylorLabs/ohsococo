@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import { Fredoka, Nunito } from "next/font/google";
+import localFont from "next/font/local";
 import { site } from "@/content/site";
 import { asset } from "@/lib/paths";
 import "./globals.css";
 
-const fredoka = Fredoka({
+const fredoka = localFont({
+  src: "./fonts/Fredoka-Variable.woff2",
+  weight: "300 700",
   variable: "--font-fredoka",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
 });
 
-const nunito = Nunito({
+const nunito = localFont({
+  src: "./fonts/Nunito-Variable.woff2",
+  weight: "200 1000",
   variable: "--font-nunito",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
 });
 
 const title = `${site.name} | Cake Pops, Cakesicles & Chocolate-Covered Treats in Orange County, NY`;
@@ -74,7 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fredoka.variable} ${nunito.variable} antialiased`}>
       <body className="flex min-h-screen flex-col">
-        <a href="#top" className="sr-only focus:not-sr-only focus:z-50 focus:fixed focus:mt-4 focus:left-4 focus:rounded focus:bg-pink-500 focus:px-4 focus:py-2 focus:text-white">
+        <a href="#top" className="sr-only focus:not-sr-only focus:z-50 focus:fixed focus:mt-4 focus:left-4 focus:rounded focus:bg-pink-700 focus:px-4 focus:py-2 focus:text-white">
           Skip to content
         </a>
         <script

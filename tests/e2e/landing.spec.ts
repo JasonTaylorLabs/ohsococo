@@ -36,6 +36,31 @@ test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
   await expect(link).toHaveAttribute("href", /#top$/);
 });
 
+test("on the 404 page, the skip link's target exists", async ({ page }) => {
+  const response = await page.goto("/does-not-exist/");
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle(/^Page not found/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
+  await page.keyboard.press("Tab");
+  const link = page.getByRole("link", { name: "Skip to content" });
+  await expect(link).toBeFocused();
+  await expect(link).toHaveAttribute("href", /#top$/);
+  await expect(page.locator("#top")).toHaveCount(1);
+  await expect(page.locator("#top").getByRole("link", { name: "Back to the homepage" })).toHaveAttribute("href", "/");
+});
+
+test("sub-site bad URL redirects to its own 404.html", async ({ page }) => {
+  await page.goto("/pr-preview/pr-999/does-not-exist/");
+  await page.waitForURL("**/pr-preview/pr-999/404.html");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Page not found");
+  // pr-999 doesn't exist locally, so the server answers with the root 404.html again; the loop guard must stop there.
+  let navigations = 0;
+  page.on("framenavigated", (frame) => frame === page.mainFrame() && navigations++);
+  await page.waitForTimeout(1000);
+  expect(navigations).toBe(0);
+  expect(new URL(page.url()).pathname).toBe("/pr-preview/pr-999/404.html");
+});
+
 test("no console errors or failed requests on load", async ({ page }) => {
   const problems: string[] = [];
   page.on("console", (m) => m.type() === "error" && problems.push(m.text()));
@@ -43,6 +68,46 @@ test("no console errors or failed requests on load", async ({ page }) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   expect(problems).toEqual([]);
+});
+
+test("fonts are self-hosted, not fetched from Google", async ({ page }) => {
+  const fontRequests: string[] = [];
+  page.on("request", (r) => r.resourceType() === "font" && fontRequests.push(r.url()));
+  const googleRequests: string[] = [];
+  page.on("request", (r) => /fonts\.(googleapis|gstatic)\.com/.test(r.url()) && googleRequests.push(r.url()));
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  expect(googleRequests).toEqual([]);
+  expect(fontRequests.length).toBeGreaterThan(0);
+  for (const url of fontRequests) expect(new URL(url).origin).toBe(new URL(page.url()).origin);
+});
+
+test("each font renders real weights, not a faked bold", async ({ page }) => {
+  await page.goto("/");
+  // A browser fakes a missing weight by smearing the regular glyphs, which keeps text width the same.
+  // Real weights have their own glyphs, so the same string measures differently at each weight.
+  const widths = await page.evaluate(async () => {
+    const root = getComputedStyle(document.documentElement);
+    const measure = async (variable: string, weights: number[]) => {
+      // Only the self-hosted face: next/font's "<name> Fallback" face is local(Arial), which CI lacks.
+      const family = root.getPropertyValue(variable).split(",")[0].trim();
+      const ctx = document.createElement("canvas").getContext("2d")!;
+      const out: number[] = [];
+      for (const w of weights) {
+        await document.fonts.load(`${w} 48px ${family}`);
+        ctx.font = `${w} 48px ${family}`;
+        out.push(ctx.measureText("Chocolate-covered treats & more").width);
+      }
+      return out;
+    };
+    return {
+      fredoka: await measure("--font-fredoka", [500, 600, 700]),
+      nunito: await measure("--font-nunito", [400, 600, 700, 800]),
+    };
+  });
+  for (const list of Object.values(widths)) {
+    expect(new Set(list.map((w) => w.toFixed(2))).size).toBe(list.length);
+  }
 });
 
 test("an empty gallery list hides the section and its nav link", async ({ page }) => {
