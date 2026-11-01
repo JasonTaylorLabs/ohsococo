@@ -28,6 +28,36 @@ test("signup rejects an invalid email", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
 });
 
+test("signup honeypot filled sends nothing", async ({ page }) => {
+  await page.goto("/");
+  // The honeypot is display:none, so a real user can't fill it; set it the way a bot would.
+  await page.locator('input[name="website"]').evaluate((el: HTMLInputElement) => (el.value = "http://spam.example"));
+  await page.getByLabel("Email address").fill("test@example.com");
+  const urlBefore = page.url();
+  // Scrolling to the form may lazy-load same-origin images, so only a POST or a cross-origin request counts.
+  const sent: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() !== "GET" || new URL(r.url()).origin !== new URL(urlBefore).origin) sent.push(`${r.method()} ${r.url()}`);
+  });
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await page.waitForTimeout(500);
+  // Next's route announcer is an always-present empty alert, so only count ones with text.
+  await expect(page.getByRole("status").filter({ hasText: /\S/ })).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: /\S/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Notify me" })).toBeVisible();
+  expect(sent).toEqual([]);
+  expect(page.url()).toBe(urlBefore);
+});
+
+test("signup with no endpoint shows the email-app message", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Email address").fill("  Test@Example.COM  ");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Your email app should open with a ready-to-send note. Hit send and you're in.",
+  );
+});
+
 test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Tab");
