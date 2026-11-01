@@ -1,3 +1,5 @@
+import { site } from "../content/site";
+
 /** Deploy base path (e.g. "/ohsococo" on GitHub Pages), read once at build time. */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -12,6 +14,15 @@ const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Prefix a public asset path with the deploy base path. */
 export function asset(path: string): string {
   return `${BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+/**
+ * Absolute production URL for `path`. Never adds the base path: `site.url` already ends in it
+ * (see commit e16eca6). Every build, including dev and previews, advertises production.
+ */
+export function absoluteUrl(path = ""): string {
+  if (path === "") return site.url;
+  return `${site.url}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 /**

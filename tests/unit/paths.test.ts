@@ -110,3 +110,33 @@ describe("subsiteNotFoundPath", () => {
     });
   });
 });
+
+async function loadAbsoluteUrl(base?: string) {
+  vi.resetModules();
+  if (base === undefined) vi.stubEnv("NEXT_PUBLIC_BASE_PATH", undefined as unknown as string);
+  else vi.stubEnv("NEXT_PUBLIC_BASE_PATH", base);
+  return (await import("../../src/lib/paths")).absoluteUrl;
+}
+
+describe("absoluteUrl", () => {
+  it("returns site.url unchanged with no argument", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
+    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo");
+    expect(absoluteUrl("")).toBe("https://jasontaylorlabs.github.io/ohsococo");
+  });
+
+  it("appends a path that starts with a slash", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
+    expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+  });
+
+  it("adds a leading slash when missing", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
+    expect(absoluteUrl("og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+  });
+
+  it("never adds the base path, so dev and previews still advertise production", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo/dev");
+    expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+  });
+});
