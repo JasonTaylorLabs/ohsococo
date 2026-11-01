@@ -2,56 +2,45 @@
 
 import { useState } from "react";
 import { site } from "@/content/site";
+import {
+  MESSAGE_FAILED,
+  MESSAGE_INVALID,
+  MESSAGE_MAILTO,
+  MESSAGE_SUCCESS,
+  SUBSCRIBE_ENDPOINT,
+  postSignup,
+  signupMailto,
+  signupStep,
+} from "@/lib/signup";
 
 type Status = "idle" | "loading" | "done" | "error";
 
-/**
- * Static-host friendly signup. Posts JSON to NEXT_PUBLIC_SUBSCRIBE_ENDPOINT
- * (Formspree, Mailchimp, Zapier, Make, etc.) when configured. Without an
- * endpoint it falls back to a pre-filled email so no signup is lost.
- */
-const ENDPOINT = process.env.NEXT_PUBLIC_SUBSCRIBE_ENDPOINT;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
+/** Drop-list signup form; the submission rules (endpoint, honeypot, validation, mailto fallback) live in `@/lib/signup`. */
 export function SignupForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
+  const show = (next: Status, text: string) => {
+    setStatus(next);
+    setMessage(text);
+  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const clean = email.trim().toLowerCase();
-    const form = new FormData(e.currentTarget);
-    if (form.get("website")) return; // honeypot
-    if (!EMAIL_RE.test(clean)) {
-      setStatus("error");
-      setMessage("Enter a valid email.");
-      return;
-    }
-
-    if (!ENDPOINT) {
-      const subject = encodeURIComponent("Add me to the Oh So Coco drop list");
-      const body = encodeURIComponent(`Please add ${clean} to the drop announcement list.`);
-      window.location.href = `mailto:${site.email}?subject=${subject}&body=${body}`;
-      setStatus("done");
-      setMessage("Your email app should open with a ready-to-send note. Hit send and you're in.");
-      return;
+    const step = signupStep(email, new FormData(e.currentTarget).get("website"), SUBSCRIBE_ENDPOINT);
+    if (step.kind === "ignore") return; // honeypot
+    if (step.kind === "invalid") return show("error", MESSAGE_INVALID);
+    if (step.kind === "mailto") {
+      window.location.href = signupMailto(step.email, site.email);
+      return show("done", MESSAGE_MAILTO);
     }
 
     setStatus("loading");
-    try {
-      const res = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ email: clean, source: "ohsococo-landing" }),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      setStatus("done");
-      setMessage("You're on the list. Drop announcements coming your way.");
+    if (await postSignup(step.endpoint, step.email)) {
+      show("done", MESSAGE_SUCCESS);
       setEmail("");
-    } catch {
-      setStatus("error");
-      setMessage("Something went wrong. Try again.");
+    } else {
+      show("error", MESSAGE_FAILED);
     }
   }
 
