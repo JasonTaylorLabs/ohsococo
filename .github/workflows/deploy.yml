@@ -3,13 +3,13 @@ name: Deploy
 # One GitHub Pages site, three kinds of build, all published from the gh-pages branch:
 #   main        -> /ohsococo/                  (production)
 #   dev         -> /ohsococo/dev/              (stable dev build)
-#   PR into dev -> /ohsococo/pr-preview/pr-N/  (removed when the PR closes)
+#   PR into dev -> /ohsococo/pr-preview/pr-N/  (removed by preview-cleanup.yml when the PR closes)
 
 on:
   push:
     branches: [main, dev]
   pull_request:
-    types: [opened, reopened, synchronize, closed]
+    types: [opened, reopened, synchronize]
     branches: [dev]
   workflow_dispatch:
 
@@ -45,14 +45,11 @@ jobs:
           fi
 
       - uses: actions/setup-node@v4
-        if: github.event.action != 'closed'
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-        if: github.event.action != 'closed'
       - run: npm run build
-        if: github.event.action != 'closed'
         env:
           NEXT_PUBLIC_BASE_PATH: ${{ steps.target.outputs.base }}
           NEXT_PUBLIC_SUBSCRIBE_ENDPOINT: ${{ vars.SUBSCRIBE_ENDPOINT }}
