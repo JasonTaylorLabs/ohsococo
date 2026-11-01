@@ -16,13 +16,20 @@ function fetchReturning(status = 200) {
   return vi.fn<typeof fetch>(async () => new Response(null, { status }));
 }
 
+// The same dispatch SignupForm's onSubmit does: only a `post` step reaches fetch.
+async function submit(raw: string, honeypot: FormDataEntryValue | null, endpoint: string | undefined, fetchImpl: typeof fetch) {
+  const step = signupStep(raw, honeypot, endpoint);
+  if (step.kind === "post") await postSignup(step.endpoint, step.email, fetchImpl);
+  return step;
+}
+
 describe("signupStep", () => {
   it("honeypot filled sends nothing", async () => {
     const fetchMock = fetchReturning();
-    expect(signupStep("test@example.com", "http://spam.example", ENDPOINT)).toEqual({ kind: "ignore" });
-    expect(signupStep("not-an-email", "x", ENDPOINT)).toEqual({ kind: "ignore" });
-    expect(signupStep("test@example.com", "x", undefined)).toEqual({ kind: "ignore" });
-    expect(signupStep("test@example.com", new File([], "x"), ENDPOINT)).toEqual({ kind: "ignore" });
+    expect(await submit("test@example.com", "http://spam.example", ENDPOINT, fetchMock)).toEqual({ kind: "ignore" });
+    expect(await submit("not-an-email", "x", ENDPOINT, fetchMock)).toEqual({ kind: "ignore" });
+    expect(await submit("test@example.com", "x", undefined, fetchMock)).toEqual({ kind: "ignore" });
+    expect(await submit("test@example.com", new File([], "x"), ENDPOINT, fetchMock)).toEqual({ kind: "ignore" });
     expect(fetchMock).not.toHaveBeenCalled();
     // An empty or missing honeypot is a real person.
     expect(signupStep("test@example.com", "", ENDPOINT).kind).toBe("post");
