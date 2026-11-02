@@ -65,3 +65,47 @@ export async function postSignup(endpoint: string, clean: string, fetchImpl: typ
     return false;
   }
 }
+
+export type SignupStatus = "idle" | "loading" | "done" | "error";
+
+/** The form state a submit changes, plus how to open the mailto href. */
+export type SignupUi = {
+  setStatus: (status: SignupStatus) => void;
+  setMessage: (message: string) => void;
+  setEmail: (email: string) => void;
+  navigate: (href: string) => void;
+};
+
+/** Everything a form submit does after preventDefault, in order, driving the form through `ui`. */
+export async function submitSignup(
+  rawEmail: string,
+  honeypot: FormDataEntryValue | null,
+  endpoint: string | undefined,
+  to: string,
+  ui: SignupUi,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const step = signupStep(rawEmail, honeypot, endpoint);
+  if (step.kind === "ignore") return; // honeypot
+  if (step.kind === "invalid") {
+    ui.setStatus("error");
+    ui.setMessage(MESSAGE_INVALID);
+    return;
+  }
+  if (step.kind === "mailto") {
+    ui.navigate(signupMailto(step.email, to));
+    ui.setStatus("done");
+    ui.setMessage(MESSAGE_MAILTO);
+    return;
+  }
+
+  ui.setStatus("loading");
+  if (await postSignup(step.endpoint, step.email, fetchImpl)) {
+    ui.setStatus("done");
+    ui.setMessage(MESSAGE_SUCCESS);
+    ui.setEmail("");
+  } else {
+    ui.setStatus("error");
+    ui.setMessage(MESSAGE_FAILED);
+  }
+}
