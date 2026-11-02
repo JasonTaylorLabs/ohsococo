@@ -47,11 +47,13 @@ rate-limit, so spam protection has to be switched on at Formspree. Setup checkli
 - **reCAPTCHA: off.** Formspree's default reCAPTCHA redirects to a Formspree
   page, which a `fetch` submit cannot follow, so every real signup would show
   "Something went wrong."
-- **No plugin that auto-adds submissions to a mailing list** (Mailchimp,
-  MailerLite, etc.) unless that list has **double opt-in** on. Without one,
+- **Nothing that emails the submitted address:** no auto-reply or confirmation
+  email, and no plugin that auto-adds submissions to a mailing list (Mailchimp,
+  MailerLite, etc.) unless that list has **double opt-in** on. Without them,
   Formspree only emails each submission to the business and nobody gets mail
   until the owner adds them, so a fake signup cannot make the site email a
-  stranger.
+  stranger. When adding people by hand, use a list with double opt-in or confirm
+  each address first.
 - **Free quota: 50 submissions a month.** Past it, the form still works for
   visitors but Formspree holds new submissions in an "Over Limit" folder, without
   emailing them or running plugins, until you reprocess them from the dashboard
