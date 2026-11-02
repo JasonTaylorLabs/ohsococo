@@ -1,0 +1,103 @@
+name: Preview cleanup
+
+# Removes /ohsococo/pr-preview/pr-N/ from gh-pages for every PR that is no longer open.
+#
+# This lives apart from deploy.yml on purpose. GitHub keeps only one pending run per concurrency
+# group and cancels the older one when a newer one queues, even with cancel-in-progress: false.
+# In the shared gh-pages group a close run could cancel a pending deploy, or be cancelled by one,
+# which is how stale previews were left behind. This workflow has its own group, and every run
+# sweeps all closed PRs, so a cancelled or failed run is harmless: the next close or the daily
+# schedule removes whatever it missed. The schedule only runs once this file is on the default branch.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev]
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: preview-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    # A PR from a fork, or from Dependabot, runs with a read-only token, so its close run could only
+    # fail. Such PRs never get a preview either. The daily schedule sweeps them with everything else.
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.fork == false && github.actor != 'dependabot[bot]')
+    steps:
+      # Only the published branch. PR code is never checked out or run here.
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+
+      - name: Remove previews of PRs that are not open
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: |
+          set -euo pipefail
+
+          # Removes every pr-preview/pr-<digits> directory whose PR is not open and commits the result.
+          # The open list is fetched fresh on every call, so a PR reopened mid-run keeps its new preview.
+          # Called as a plain statement, never inside `if`, so set -e stays in force inside it.
+          remove_stale() {
+            local open_json open dirs dir n
+            # Open PRs to any base. If this fails, set -e stops the job here and nothing is removed.
+            open_json=$(gh pr list --state open --limit 1000 --json number)
+            jq -e 'type == "array"' <<<"$open_json" >/dev/null
+            open=$(jq -r '.[].number' <<<"$open_json")
+            echo "Open PRs: ${open//$'\n'/ }"
+
+            dirs=$(git ls-tree -d --name-only HEAD -- pr-preview/)
+            while IFS= read -r dir; do
+              [[ "$dir" =~ ^pr-preview/pr-([0-9]+)$ ]] || continue
+              n="${BASH_REMATCH[1]}"
+              if grep -qxF -- "$n" <<<"$open"; then
+                echo "keep   $dir (PR #$n is open)"
+              else
+                echo "remove $dir"
+                git rm -r -q -- "$dir"
+              fi
+            done <<<"$dirs"
+
+            if git diff --cached --quiet; then
+              return
+            fi
+            git commit -q -m "Remove previews of closed PRs"
+            pending=1
+          }
+
+          # pending is set while a commit is waiting to be pushed. A rebase keeps it; a reset clears it.
+          pending=""
+          for attempt in 1 2 3 4 5; do
+            remove_stale
+            if [ -z "$pending" ]; then
+              echo "No stale previews. Nothing to commit."
+              exit 0
+            fi
+            if git push origin HEAD:gh-pages; then
+              echo "Stale previews removed."
+              exit 0
+            fi
+            echo "Push rejected (gh-pages moved, or no write access). Rebasing and retrying (attempt $attempt of 5)."
+            if ! git pull --rebase origin gh-pages; then
+              echo "Rebase conflicted: gh-pages changed a directory being removed. Starting over from the new tip."
+              git rebase --abort || true
+              git reset -q --hard FETCH_HEAD
+              pending=""
+            fi
+          done
+          echo "Could not push after 5 attempts."
+          exit 1
