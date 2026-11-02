@@ -230,3 +230,36 @@ test("every gallery photo loads", async ({ page }) => {
     await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
   }
 });
+
+test("signup email input is as tall as the Notify me button on phones and fills the row on desktop", async ({ page }) => {
+
+  async function measure() {
+    const inputBox = await page.getByLabel("Email address").boundingBox();
+    const buttonBox = await page.getByRole("button", { name: "Notify me" }).boundingBox();
+    return { inputBox, buttonBox };
+  }
+
+  // --- phone viewport 320px ---
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/");
+  await expect(page.getByLabel("Email address")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Notify me" })).toBeVisible();
+  const phones320 = await measure();
+  expect(phones320.inputBox?.height).toBeGreaterThan(43);
+  expect(phones320.buttonBox?.height).toBeGreaterThan(43);
+  expect(Math.abs(phones320.inputBox!.height - phones320.buttonBox!.height)).toBeLessThanOrEqual(1);
+
+  // --- phone viewport 390px ---
+  await page.setViewportSize({ width: 390, height: 800 });
+  const phones390 = await measure();
+  expect(phones390.inputBox?.height).toBeGreaterThan(43);
+  expect(phones390.buttonBox?.height).toBeGreaterThan(43);
+  expect(Math.abs(phones390.inputBox!.height - phones390.buttonBox!.height)).toBeLessThanOrEqual(1);
+
+  // --- desktop viewport 1280px ---
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const desktop = await measure();
+  expect(Math.abs(desktop.inputBox!.y - desktop.buttonBox!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(desktop.inputBox!.height - desktop.buttonBox!.height)).toBeLessThanOrEqual(1);
+  expect(desktop.inputBox!.width).toBeGreaterThan(desktop.buttonBox!.width ?? 0);
+});
