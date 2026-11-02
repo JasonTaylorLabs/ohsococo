@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { site } from "@/content/site";
-import { SUBSCRIBE_ENDPOINT, submitSignup, type SignupStatus } from "@/lib/signup";
+import { MESSAGE_INVALID, SUBSCRIBE_ENDPOINT, submitSignup, type SignupStatus } from "@/lib/signup";
 
 /** Drop-list signup form; the submission rules (endpoint, honeypot, validation, mailto fallback) live in `@/lib/signup`. */
 export function SignupForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<SignupStatus>("idle");
   const [message, setMessage] = useState("");
+  const doneRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (status === "done") doneRef.current?.focus();
+  }, [status]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,7 +29,7 @@ export function SignupForm() {
 
   if (status === "done") {
     return (
-      <p role="status" className="rounded-2xl bg-cream-100 px-5 py-4 text-cocoa-800 font-semibold">
+      <p ref={doneRef} tabIndex={-1} role="status" className="rounded-2xl bg-cream-100 px-5 py-4 text-cocoa-800 font-semibold">
         🤎 {message}
       </p>
     );
@@ -45,6 +50,8 @@ export function SignupForm() {
         placeholder="you@email.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
+        aria-invalid={status === "error" && message === MESSAGE_INVALID ? true : undefined}
+        aria-describedby={status === "error" ? "signup-error" : undefined}
         className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-200 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
       />
       {/* Honeypot field, hidden from people, filled by bots */}
@@ -57,7 +64,11 @@ export function SignupForm() {
         {status === "loading" ? "Adding…" : "Notify me"}
       </button>
       {status === "error" && (
-        <p role="alert" className="basis-full text-sm font-semibold text-pink-700">
+        <p
+          id="signup-error"
+          role="alert"
+          className="basis-full text-sm font-semibold text-pink-700"
+        >
           {message}
         </p>
       )}

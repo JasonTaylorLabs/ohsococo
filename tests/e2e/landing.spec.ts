@@ -28,6 +28,19 @@ test("signup rejects an invalid email", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
 });
 
+test("after signup, focus moves to the confirmation message", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("test@example.com");
+  // Keyboard path: press Enter in the input.
+  await input.press("Enter");
+
+  const status = page.getByRole("status").filter({ hasText: "Your email app should open" });
+  await expect(status).toBeVisible();
+  await expect(status).toBeFocused();
+  await expect(page.evaluate(() => document.activeElement?.tagName)).resolves.toBe("P");
+});
+
 test("signup honeypot filled sends nothing", async ({ page }) => {
   await page.goto("/");
   // The honeypot is display:none, so a real user can't fill it; set it the way a bot would.
@@ -47,6 +60,24 @@ test("signup honeypot filled sends nothing", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Notify me" })).toBeVisible();
   expect(sent).toEqual([]);
   expect(page.url()).toBe(urlBefore);
+});
+
+test("signup error is linked to the email field", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  expect(await input.evaluate((el) => el.hasAttribute("aria-invalid"))).toBe(false);
+  expect(await input.evaluate((el) => el.hasAttribute("aria-describedby"))).toBe(false);
+
+  await input.fill("not-an-email");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
+
+  await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(input).toHaveAttribute("aria-describedby", "signup-error");
+  await expect(input).toHaveAccessibleDescription("Enter a valid email.");
+
+  await expect(page.locator("#signup-error")).toHaveText("Enter a valid email.");
+  await expect(page.locator("#signup-error")).toHaveAttribute("role", "alert");
 });
 
 test("signup with no endpoint shows the email-app message", async ({ page }) => {
