@@ -58,6 +58,12 @@ test("signup with no endpoint shows the email-app message", async ({ page }) => 
   );
 });
 
+test("signup fine print with no endpoint names no provider", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#signup p", { hasText: "No spam." })).toHaveText("No spam. Unsubscribe anytime.");
+  await expect(page.getByText("Your email is sent to")).toHaveCount(0);
+});
+
 test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Tab");

@@ -1,7 +1,8 @@
 /**
- * Static-host friendly signup. Posts JSON to SUBSCRIBE_ENDPOINT below
- * (Formspree, Mailchimp, Zapier, Make, etc.) when configured. Without an
- * endpoint it falls back to a pre-filled email so no signup is lost.
+ * Static-host friendly signup. Posts JSON to SUBSCRIBE_ENDPOINT below when
+ * configured; the expected provider is Formspree (free plan), set up with the
+ * spam settings in README.md "Email signup". Without an endpoint it falls back
+ * to a pre-filled email so no signup is lost.
  *
  * No imports: vitest has no `@/` alias, and the caller passes `site.email` in.
  */
@@ -64,4 +65,21 @@ export async function postSignup(endpoint: string, clean: string, fetchImpl: typ
   } catch {
     return false;
   }
+}
+
+/**
+ * Who the signup email goes to, for the fine print under the form: "Formspree" for
+ * formspree.io (or a subdomain), otherwise the endpoint's hostname. Null when there is
+ * no endpoint or it is not a URL with a host.
+ */
+export function signupProviderName(endpoint: string | undefined): string | null {
+  if (!endpoint) return null;
+  let host: string;
+  try {
+    host = new URL(endpoint).hostname;
+  } catch {
+    return null;
+  }
+  if (host === "formspree.io" || host.endsWith(".formspree.io")) return "Formspree";
+  return host || null; // e.g. "mailto:a@b" parses but has no host
 }

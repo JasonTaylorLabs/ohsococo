@@ -5,6 +5,10 @@ import { ProductTile } from "@/components/ProductTile";
 import { SignupForm } from "@/components/SignupForm";
 import { faq, gallery, howToOrder, occasions, productLines, site } from "@/content/site";
 import { asset } from "@/lib/paths";
+import { SUBSCRIBE_ENDPOINT, signupProviderName } from "@/lib/signup";
+
+// Named in the fine print under the form; null (nothing added) without an endpoint.
+const signupProvider = signupProviderName(SUBSCRIBE_ENDPOINT);
 
 function Section({
   id,
@@ -231,7 +235,10 @@ export default function Home() {
               hit Instagram.
             </p>
             <SignupForm />
-            <p className="mt-3 text-xs text-cocoa-600">No spam. Unsubscribe anytime.</p>
+            <p className="mt-3 text-xs text-cocoa-600">
+              No spam. Unsubscribe anytime.
+              {signupProvider && ` Your email is sent to ${signupProvider} and only used for drop announcements.`}
+            </p>
           </div>
         </Section>
       </main>
