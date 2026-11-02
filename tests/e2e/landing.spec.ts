@@ -270,33 +270,31 @@ test("signup error sits below the email field and Notify me button on wide scree
     await page.setViewportSize({ width, height: 800 });
     await page.goto("/");
     const input = page.getByLabel("Email address");
-    const submitButton = page.getByRole("button", { name: "Notify me" });
+    const button = page.getByRole("button", { name: "Notify me" });
     const form = page.locator("form").filter({ has: input });
-    await input.fill("not-an-email");
-    await submitButton.click();
-    await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
     const alert = page.getByRole("alert").filter({ hasText: "Enter a valid email." });
-    const [fBox, iBox, bBox, aBox] = await Promise.all([form.boundingBox(), input.boundingBox(), submitButton.boundingBox(), alert.boundingBox()]);
-    expect(fBox).not.toBeNull();
-    expect(iBox).not.toBeNull();
-    expect(bBox).not.toBeNull();
-    expect(aBox).not.toBeNull();
-    const f = fBox as NonNullable<typeof fBox>;
-    const i = iBox as NonNullable<typeof iBox>;
-    const b = bBox as NonNullable<typeof bBox>;
-    const a = aBox as NonNullable<typeof aBox>;
-    // input and button top are within 1 px of each other
+    await input.fill("not-an-email");
+    await button.click();
+    await expect(alert).toBeVisible();
+    const boxes = await Promise.all([form.boundingBox(), input.boundingBox(), button.boundingBox(), alert.boundingBox()]);
+    expect(boxes).not.toContain(null);
+    const [f, i, b, a] = boxes as NonNullable<(typeof boxes)[number]>[];
+
+    // Input and button share one row at the same height.
     expect(Math.abs(i.y - b.y)).toBeLessThanOrEqual(1);
-    // their heights are within 1 px (button stays one line)
     expect(Math.abs(i.height - b.height)).toBeLessThanOrEqual(1);
-    // input is wider than button
     expect(i.width).toBeGreaterThan(b.width);
-    // alert top is at least the bottom of input and below button
+    // The button is a fixed h-14, so its box stays 56 px when the label wraps: count the label's lines instead.
+    const labelLines = await button.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+    expect(labelLines).toBe(1);
+    // The error has its own full-width line below the row.
     expect(a.y).toBeGreaterThanOrEqual(i.y + i.height);
     expect(a.y).toBeGreaterThanOrEqual(b.y + b.height);
-    // alert left edge aligns with form's left edge
     expect(Math.abs(a.x - f.x)).toBeLessThanOrEqual(1);
-    // alert width matches the form's width (full-width line)
     expect(Math.abs(a.width - f.width)).toBeLessThanOrEqual(1);
   }
 });
