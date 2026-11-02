@@ -11,9 +11,16 @@ export const SUBSITES = { dev: "dev", previewUmbrella: "pr-preview", previewPref
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+// <umbrella>/<prefix><digits>/ — the slash is required so "pr-17abc/" can't match pr-17
+const PREVIEW_RE = new RegExp(
+  `^/${escapeRegExp(SUBSITES.previewUmbrella)}/${escapeRegExp(SUBSITES.previewPrefix)}(\\d+)/`,
+);
+
+const withLeadingSlash = (path: string) => (path.startsWith("/") ? path : `/${path}`);
+
 /** Prefix a public asset path with the deploy base path. */
 export function asset(path: string): string {
-  return `${BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${BASE}${withLeadingSlash(path)}`;
 }
 
 /**
@@ -22,7 +29,7 @@ export function asset(path: string): string {
  */
 export function absoluteUrl(path = ""): string {
   if (path === "") return site.url;
-  return `${site.url}${path.startsWith("/") ? path : `/${path}`}`;
+  return `${site.url}${withLeadingSlash(path)}`;
 }
 
 /**
@@ -41,10 +48,8 @@ export function subsiteNotFoundPath(pathname: string, basePath = BASE): string |
   // dev/ — must not be something like "developer/"
   if (rest.startsWith(`/${SUBSITES.dev}/`)) return `${basePath}/${SUBSITES.dev}/404.html`;
 
-  // pr-preview/pr-<digits>/ — the slash is required so "pr-17abc/" can't match pr-17
-  const umbrella = escapeRegExp(SUBSITES.previewUmbrella);
-  const prefix = escapeRegExp(SUBSITES.previewPrefix);
-  const prMatch = rest.match(new RegExp(`^/${umbrella}/${prefix}(\\d+)/`));
+  // pr-preview/pr-<digits>/
+  const prMatch = rest.match(PREVIEW_RE);
   if (prMatch) {
     const digits = prMatch[1];
     return `${basePath}/${SUBSITES.previewUmbrella}/${SUBSITES.previewPrefix}${digits}/404.html`;

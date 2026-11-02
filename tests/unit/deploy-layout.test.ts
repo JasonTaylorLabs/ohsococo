@@ -17,7 +17,7 @@ function required(match: RegExpMatchArray | null, what: string): string {
 function baseFor(condition: string): string {
   const escaped = condition.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return required(
-    deployYml.match(new RegExp(`${escaped}[^\\n]*\\n\\s*echo "base=([^"]+)"`)),
+    deployYml.match(new RegExp(`${escaped}[^\\n]*\\n\\s*echo "base=([^"]*)"`)),
     `base= line for ${condition}`,
   );
 }
