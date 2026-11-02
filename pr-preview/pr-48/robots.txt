@@ -1,0 +1,5 @@
+User-Agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://jasontaylorlabs.github.io/ohsococo/sitemap.xml
