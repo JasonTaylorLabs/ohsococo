@@ -8,7 +8,7 @@ function noDoubleSlash(url: string) {
   expect(withoutScheme).not.toContain("//");
 }
 
-async function collectLocs(sitemapText: string): Promise<string[]> {
+function collectLocs(sitemapText: string): string[] {
   const re = /<loc>(.*?)<\/loc>/g;
   const locs: string[] = [];
   let match: RegExpExecArray | null;
@@ -22,7 +22,7 @@ test("sitemap.xml: status 200, at least one <loc>, first equals home, no double 
   const resp = await request.get("/sitemap.xml");
   expect(resp.status()).toBe(200);
   const text = await resp.text();
-  const locs = await collectLocs(text);
+  const locs = collectLocs(text);
   expect(locs.length).toBeGreaterThan(0);
   expect(locs[0]).toBe(home);
   for (const loc of locs) {
@@ -49,24 +49,12 @@ test("og:url meta tag equals home", async ({ page }) => {
 
 test("JSON-LD url equals home, image equals home og.png, no double slash in url/image/logo", async ({ page }) => {
   await page.goto("/");
-  const script = page.locator('script[type="application/ld+json"]');
-  await expect(script.first()).toHaveCount(1);
-  const json = JSON.parse(await innerText(script.first()));
+  const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const bakeries = blocks.map((text) => JSON.parse(text)).filter((block) => block["@type"] === "Bakery");
+  expect(bakeries).toHaveLength(1);
+  const [json] = bakeries;
   expect(json.url).toBe(home);
   expect(json.image).toBe(`${home}og.png`);
-  noDoubleSlash(json.url);
-  if (typeof json.image === "string") {
-    noDoubleSlash(json.image);
-  }
-  if (Array.isArray(json.image)) {
-    for (const img of json.image) {
-      const imgUrl = typeof img === "string" ? img : (img as { url: string }).url;
-      noDoubleSlash(imgUrl);
-    }
-  }
-  noDoubleSlash(json.logo ?? "");
+  expect(json.logo).toBe(`${home}logo.svg`);
+  for (const url of [json.url, json.image, json.logo]) noDoubleSlash(url);
 });
-
-async function innerText(loc: import("@playwright/test").Locator): Promise<string> {
-  return loc.evaluate((el) => (el as HTMLElement).innerText);
-}
