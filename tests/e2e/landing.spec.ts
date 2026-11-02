@@ -264,3 +264,39 @@ test("signup email input is as tall as the Notify me button on phones and fills 
   expect(Math.abs(b.x + b.width - (f.x + f.width))).toBeLessThanOrEqual(1);
   expect(i.width).toBeGreaterThan(b.width);
 });
+
+test("signup error sits below the email field and Notify me button on wide screens", async ({ page }) => {
+  for (const width of [640, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+    const input = page.getByLabel("Email address");
+    const submitButton = page.getByRole("button", { name: "Notify me" });
+    const form = page.locator("form").filter({ has: input });
+    await input.fill("not-an-email");
+    await submitButton.click();
+    await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
+    const alert = page.getByRole("alert").filter({ hasText: "Enter a valid email." });
+    const [fBox, iBox, bBox, aBox] = await Promise.all([form.boundingBox(), input.boundingBox(), submitButton.boundingBox(), alert.boundingBox()]);
+    expect(fBox).not.toBeNull();
+    expect(iBox).not.toBeNull();
+    expect(bBox).not.toBeNull();
+    expect(aBox).not.toBeNull();
+    const f = fBox as NonNullable<typeof fBox>;
+    const i = iBox as NonNullable<typeof iBox>;
+    const b = bBox as NonNullable<typeof bBox>;
+    const a = aBox as NonNullable<typeof aBox>;
+    // input and button top are within 1 px of each other
+    expect(Math.abs(i.y - b.y)).toBeLessThanOrEqual(1);
+    // their heights are within 1 px (button stays one line)
+    expect(Math.abs(i.height - b.height)).toBeLessThanOrEqual(1);
+    // input is wider than button
+    expect(i.width).toBeGreaterThan(b.width);
+    // alert top is at least the bottom of input and below button
+    expect(a.y).toBeGreaterThanOrEqual(i.y + i.height);
+    expect(a.y).toBeGreaterThanOrEqual(b.y + b.height);
+    // alert left edge aligns with form's left edge
+    expect(Math.abs(a.x - f.x)).toBeLessThanOrEqual(1);
+    // alert width matches the form's width (full-width line)
+    expect(Math.abs(a.width - f.width)).toBeLessThanOrEqual(1);
+  }
+});
