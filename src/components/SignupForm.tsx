@@ -45,7 +45,7 @@ export function SignupForm() {
         placeholder="you@email.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="h-14 flex-1 rounded-full border-2 border-cocoa-200 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600/60 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
+        className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-200 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600/60 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
       />
       {/* Honeypot field, hidden from people, filled by bots */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
