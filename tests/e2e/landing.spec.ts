@@ -298,3 +298,42 @@ test("signup error sits below the email field and Notify me button on wide scree
     expect(Math.abs(a.width - f.width)).toBeLessThanOrEqual(1);
   }
 });
+
+test("signup label stays visible above the email field and its text meets contrast", async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+
+    const input = page.getByLabel("Email address");
+    const label = page.locator('label[for="signup-email"]');
+
+    for (const typed of ["", "not-an-email"]) {
+      await input.fill(typed);
+      await expect(label).toBeVisible();
+      await expect(label).toHaveText("Email address");
+
+      // Measure both in one call: fill() may still be smooth-scrolling the page.
+      // An sr-only label is a 1x1 box that Playwright still counts as visible.
+      const [labelBox, inputBox] = await input.evaluate((el) => {
+        const labelRect = document.querySelector('label[for="signup-email"]')!.getBoundingClientRect();
+        const inputRect = el.getBoundingClientRect();
+        return [labelRect, inputRect].map(({ y, width, height }) => ({ y, width, height }));
+      });
+      expect(labelBox.height).toBeGreaterThanOrEqual(14);
+      expect(labelBox.width).toBeGreaterThanOrEqual(80);
+      expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(inputBox.y + 1);
+      expect(inputBox.y - (labelBox.y + labelBox.height)).toBeLessThanOrEqual(24);
+    }
+
+    await page.getByRole("button", { name: "Notify me" }).click();
+    const alert = page.getByRole("alert").filter({ hasText: "Enter a valid email." });
+    await expect(alert).toHaveText("Enter a valid email.");
+    await expect(alert).toHaveCSS("color", "rgb(196, 61, 112)");
+  }
+
+  await page.goto("/");
+  const placeholderColor = await page
+    .getByLabel("Email address")
+    .evaluate((el) => getComputedStyle(el, "::placeholder").color);
+  expect(placeholderColor).toBe("rgb(154, 106, 69)");
+});
