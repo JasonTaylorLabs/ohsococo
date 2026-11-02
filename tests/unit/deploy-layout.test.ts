@@ -35,6 +35,18 @@ function stepFor(kind: string): string {
   );
 }
 
+/** The `KEY: value` pairs under `env:` in the step with this `id:`. */
+function envOfStep(id: string): Record<string, string> {
+  const match = deployYml.match(new RegExp(`\\n[ \\t]*id: ${id}\\n([ \\t]*)env:[ \\t]*\\n((?:\\1[ \\t]+\\S[^\\n]*\\n?)+)`));
+  const body = required(match ? [match[0], match[2]] : null, `env: in the step with id: ${id}`);
+  return Object.fromEntries(
+    body.split("\n").filter(Boolean).map((line) => {
+      const [key, ...rest] = line.trim().split(":");
+      return [key, rest.join(":").trim()];
+    }),
+  );
+}
+
 /** The block-list values under `key: |` in `text`. */
 function listOf(text: string, key: string, where: string): string[] {
   const match = text.match(new RegExp(`^(\\s*)${key}:\\s*\\|\\s*\\n((?:\\1\\s+\\S[^\\n]*\\n?)+)`, "m"));
@@ -45,15 +57,23 @@ function listOf(text: string, key: string, where: string): string[] {
 }
 
 describe("deploy.yml subsite layout matches SUBSITES in src/lib/paths.ts", () => {
-  const prodBase = baseFor(`github.ref_name }}" = "main"`);
+  const prodBase = baseFor(`"$REF_NAME" = "main"`);
+
+  it("the target script reads the event, PR number and branch from the GitHub context", () => {
+    expect(envOfStep("target")).toEqual({
+      EVENT_NAME: "${{ github.event_name }}",
+      PR_NUMBER: "${{ github.event.number }}",
+      REF_NAME: "${{ github.ref_name }}",
+    });
+  });
 
   it("dev builds at <prod base>/<SUBSITES.dev>", () => {
-    expect(baseFor(`github.ref_name }}" = "dev"`)).toBe(`${prodBase}/${SUBSITES.dev}`);
+    expect(baseFor(`"$REF_NAME" = "dev"`)).toBe(`${prodBase}/${SUBSITES.dev}`);
   });
 
   it("PR previews build at <prod base>/<umbrella>/<prefix><PR number>", () => {
-    expect(baseFor(`github.event_name }}" = "pull_request"`)).toBe(
-      `${prodBase}/${SUBSITES.previewUmbrella}/${SUBSITES.previewPrefix}\${{ github.event.number }}`,
+    expect(baseFor(`"$EVENT_NAME" = "pull_request"`)).toBe(
+      `${prodBase}/${SUBSITES.previewUmbrella}/${SUBSITES.previewPrefix}$PR_NUMBER`,
     );
   });
 

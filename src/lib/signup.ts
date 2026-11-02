@@ -1,7 +1,8 @@
 /**
- * Static-host friendly signup. Posts JSON to SUBSCRIBE_ENDPOINT below
- * (Formspree, Mailchimp, Zapier, Make, etc.) when configured. Without an
- * endpoint it falls back to a pre-filled email so no signup is lost.
+ * Static-host friendly signup. Posts JSON to SUBSCRIBE_ENDPOINT below when
+ * configured; the expected provider is Formspree (free plan), set up with the
+ * spam settings in README.md "Email signup". Without an endpoint it falls back
+ * to a pre-filled email so no signup is lost.
  *
  * No imports: vitest has no `@/` alias, and the caller passes `site.email` in.
  */
@@ -63,5 +64,66 @@ export async function postSignup(endpoint: string, clean: string, fetchImpl: typ
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Who the signup email goes to, for the fine print under the form: "Formspree" for
+ * formspree.io (or a subdomain), otherwise the endpoint's hostname. Null when there is
+ * no endpoint or it is not a URL with a host.
+ */
+export function signupProviderName(endpoint: string | undefined): string | null {
+  if (!endpoint) return null;
+  let host: string;
+  try {
+    host = new URL(endpoint).hostname;
+  } catch {
+    return null;
+  }
+  if (host === "formspree.io" || host.endsWith(".formspree.io")) return "Formspree";
+  return host || null; // e.g. "mailto:a@b" parses but has no host
+}
+
+export type SignupStatus = "idle" | "loading" | "done" | "error";
+
+/** The form state a submit changes, plus how to open the mailto href. */
+export type SignupUi = {
+  setStatus: (status: SignupStatus) => void;
+  setMessage: (message: string) => void;
+  setEmail: (email: string) => void;
+  navigate: (href: string) => void;
+};
+
+/** Everything a form submit does after preventDefault, in order, driving the form through `ui`. */
+export async function submitSignup(
+  rawEmail: string,
+  honeypot: FormDataEntryValue | null,
+  endpoint: string | undefined,
+  to: string,
+  ui: SignupUi,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  const step = signupStep(rawEmail, honeypot, endpoint);
+  if (step.kind === "ignore") return; // honeypot
+  if (step.kind === "invalid") {
+    ui.setStatus("error");
+    ui.setMessage(MESSAGE_INVALID);
+    return;
+  }
+  if (step.kind === "mailto") {
+    ui.navigate(signupMailto(step.email, to));
+    ui.setStatus("done");
+    ui.setMessage(MESSAGE_MAILTO);
+    return;
+  }
+
+  ui.setStatus("loading");
+  if (await postSignup(step.endpoint, step.email, fetchImpl)) {
+    ui.setStatus("done");
+    ui.setMessage(MESSAGE_SUCCESS);
+    ui.setEmail("");
+  } else {
+    ui.setStatus("error");
+    ui.setMessage(MESSAGE_FAILED);
   }
 }

@@ -30,14 +30,18 @@ jobs:
 
       - name: Pick the base path for this build
         id: target
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.number }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "base=/ohsococo/pr-preview/pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "base=/ohsococo/pr-preview/pr-$PR_NUMBER" >> "$GITHUB_OUTPUT"
             echo "kind=preview" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.ref_name }}" = "main" ]; then
+          elif [ "$REF_NAME" = "main" ]; then
             echo "base=/ohsococo" >> "$GITHUB_OUTPUT"
             echo "kind=production" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.ref_name }}" = "dev" ]; then
+          elif [ "$REF_NAME" = "dev" ]; then
             echo "base=/ohsococo/dev" >> "$GITHUB_OUTPUT"
             echo "kind=dev" >> "$GITHUB_OUTPUT"
           else
@@ -56,25 +60,27 @@ jobs:
 
       - name: Publish production
         if: steps.target.outputs.kind == 'production'
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
         with:
           branch: gh-pages
           folder: out
           clean-exclude: |
             dev
             pr-preview
+          force: false
 
       - name: Publish dev
         if: steps.target.outputs.kind == 'dev'
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
         with:
           branch: gh-pages
           folder: out
           target-folder: dev
+          force: false
 
       - name: Publish PR preview
         if: steps.target.outputs.kind == 'preview'
-        uses: rossjrw/pr-preview-action@v1
+        uses: rossjrw/pr-preview-action@873417d2df72380da1f3978378fb58560bcde976 # v1.8.2
         with:
           source-dir: out
           preview-branch: gh-pages
