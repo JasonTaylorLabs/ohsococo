@@ -6,6 +6,9 @@ import { describe, expect, it } from "vitest";
 // third-party action pinned to a commit, and no force-push from the publish steps. The workflows
 // are read as text, like deploy-layout.test.ts, so this needs no YAML parser. Everything is keyed
 // on indentation and on `run:` / `uses:` / `with:` keys, never on line numbers or step names.
+// Not covered: expressions inside `with:` inputs that an action itself executes (for example
+// `actions/github-script`'s `script:`), and the force-push setting of any deploy action other than
+// JamesIves/github-pages-deploy-action.
 
 const workflowsDir = path.resolve(__dirname, "../../.github/workflows");
 const workflowFiles = readdirSync(workflowsDir)
@@ -33,9 +36,10 @@ function isBlankOrComment(line: string): boolean {
 }
 
 /**
- * The script of every `run:` in the file, with the line it starts on. For `run: |` and the other
- * block scalars, the script is the lines indented deeper than the `run:` key, so a sibling
- * `env:` or `with:` that follows is not part of it.
+ * The script of every `run:` in the file, with the line it starts on. The script is the value on
+ * the `run:` line plus every following line indented deeper than the key, which covers an inline
+ * value, a block scalar (`|`, `>`, with any chomping or indentation indicator) and a plain scalar
+ * that wraps onto more lines. A sibling `env:` or `with:` that follows is not part of it.
  */
 function runScripts(text: string): { line: number; script: string }[] {
   const lines = text.split("\n");
@@ -44,13 +48,8 @@ function runScripts(text: string): { line: number; script: string }[] {
     if (isBlankOrComment(line)) return;
     const match = line.match(/^\s*(?:-\s+)?run:\s*(.*)$/);
     if (!match) return;
-    const value = match[1].trim();
-    if (!/^[|>][+-]?\s*(#.*)?$/.test(value)) {
-      scripts.push({ line: i + 1, script: value });
-      return;
-    }
     const indent = keyIndent(line);
-    const body: string[] = [];
+    const body: string[] = [match[1].trim()];
     for (let j = i + 1; j < lines.length; j++) {
       const next = lines[j];
       if (next.trim() === "") {
@@ -74,15 +73,19 @@ export function expressionsInRunBlocks(text: string): string[] {
 
 /**
  * Every `uses:` in the file. Comment lines are skipped. The ref is the value without quotes, and
- * `comment` is the trailing `# ...` if there is one.
+ * `comment` is the trailing `# ...` if there is one. A `uses:` line in a form this parser does not
+ * read (a flow mapping, a quoted key, a value on the next line) is returned with the whole line
+ * as its ref, so it is reported rather than skipped.
  */
 function usesRefs(text: string): { line: number; ref: string; comment: string }[] {
   const refs: { line: number; ref: string; comment: string }[] = [];
   text.split("\n").forEach((line, i) => {
     if (isBlankOrComment(line)) return;
+    if (!/^\s*(?:-\s+)?(?:\{[^}]*?)?["']?uses["']?:/.test(line)) return;
     const match = line.match(/^\s*(?:-\s+)?uses:\s*["']?([^\s"']+)["']?\s*(#.*)?$/);
-    if (!match) return;
-    refs.push({ line: i + 1, ref: match[1], comment: (match[2] ?? "").trim() });
+    refs.push(
+      match ? { line: i + 1, ref: match[1], comment: (match[2] ?? "").trim() } : { line: i + 1, ref: line.trim(), comment: "" },
+    );
   });
   return refs;
 }
@@ -114,7 +117,7 @@ function stepsUsing(text: string, prefix: string): { line: number; step: string 
     let start = i;
     while (start > 0 && !(indentOf(lines[start]) === indent - 2 && /^\s*-\s/.test(lines[start]))) start--;
     let end = i + 1;
-    while (end < lines.length && !(indentOf(lines[end]) <= indent - 2 && lines[end].trim() !== "")) end++;
+    while (end < lines.length && !(indentOf(lines[end]) <= indent - 2 && !isBlankOrComment(lines[end]))) end++;
     steps.push({ line: start + 1, step: lines.slice(start, end).join("\n") });
   });
   return steps;
@@ -123,14 +126,18 @@ function stepsUsing(text: string, prefix: string): { line: number; step: string 
 const deployActionPrefix = "JamesIves/github-pages-deploy-action@";
 
 /**
- * Steps that call the GitHub Pages deploy action without `force: false` under `with:`. Without it
- * the action force-pushes, which can overwrite a commit another workflow just put on gh-pages.
+ * Steps that call the GitHub Pages deploy action without `force: false` as a direct input under
+ * `with:`. Without it the action force-pushes, which can overwrite a commit another workflow just
+ * put on gh-pages. Only the bare `false` counts, so the workflow stays in the one form this test
+ * reads.
  */
 export function deployStepsWithoutForceFalse(text: string): string[] {
   return stepsUsing(text, deployActionPrefix)
     .filter(({ step }) => {
-      const withBlock = step.match(/^(\s*)with:\s*\n((?:\1\s+[^\n]*\n?|\s*\n)+)/m);
-      return !withBlock || !/^\s*force:\s*false\s*$/m.test(withBlock[2]);
+      const withBlock = step.match(/^(\s*)with:\s*\n((?:\1\s+[^\n]*\n?|[ \t]*(?:#[^\n]*)?\n)+)/m);
+      if (!withBlock) return true;
+      const inputIndent = withBlock[2].match(/^([ \t]*)\S/m)?.[1] ?? "";
+      return !new RegExp(`^${inputIndent}force:\\s*false\\s*(#.*)?$`, "m").test(withBlock[2]);
     })
     .map(({ line, step }) => `step at line ${line}: ${step.trim().split("\n")[0].trim()}`);
 }
@@ -183,6 +190,25 @@ describe("the hardening checks fail on the bad patterns", () => {
     expect(expressionsInRunBlocks(good)).toEqual([]);
   });
 
+  it("flags ${{ in a block scalar with an indentation indicator and in a plain scalar that wraps", () => {
+    const indicator = ["      - run: |2", "          echo ${{ github.event.issue.title }}"].join("\n");
+    expect(expressionsInRunBlocks(indicator)).toEqual(["run: at line 1: echo ${{ github.event.issue.title }}"]);
+    const wrapped = ["      - run: echo", "          ${{ github.head_ref }}", "        env:", "          X: ${{ github.sha }}"].join("\n");
+    expect(expressionsInRunBlocks(wrapped)).toEqual(["run: at line 1: ${{ github.head_ref }}"]);
+  });
+
+  it("reports a uses: line it cannot read instead of skipping it", () => {
+    const bad = [
+      "      - uses: rossjrw/pr-preview-action@v1 x",
+      "      - { uses: rossjrw/pr-preview-action@v1 }",
+      "      - {name: x, uses: rossjrw/pr-preview-action@v1, with: {a: b}}",
+      '      - "uses": rossjrw/pr-preview-action@v1',
+      "      - uses:",
+      "          rossjrw/pr-preview-action@v1",
+    ].join("\n");
+    expect(unpinnedThirdPartyUses(bad).map((f) => f.split(":")[1])).toEqual([" at line 1", " at line 2", " at line 3", " at line 4", " at line 5"]);
+  });
+
   it("flags a third-party uses: on a tag, on a short SHA, or on a SHA with no release comment", () => {
     const bad = [
       "      - uses: rossjrw/pr-preview-action@v1",
@@ -227,7 +253,26 @@ describe("the hardening checks fail on the bad patterns", () => {
     expect(deployStepsWithoutForceFalse(bad)).toEqual(["step at line 1: - name: Publish dev"]);
   });
 
-  it("does not accept force: \"false\" or force: true, and only looks under with:", () => {
+  it("does not accept force: false nested inside another input, and accepts a trailing comment", () => {
+    const nested = [
+      "      - uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0",
+      "        with:",
+      "          clean-exclude: |",
+      "            dev",
+      "            force: false",
+    ].join("\n");
+    expect(deployStepsWithoutForceFalse(nested)).toHaveLength(1);
+    const commented = [
+      "      - uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0",
+      "        with:",
+      "          branch: gh-pages",
+      "      # keep history",
+      "          force: false # rebase on a rejected push",
+    ].join("\n");
+    expect(deployStepsWithoutForceFalse(commented)).toEqual([]);
+  });
+
+  it("only accepts the bare force: false, and only looks under with:", () => {
     const quoted = ["      - uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0", "        with:", '          force: "false"'].join("\n");
     expect(deployStepsWithoutForceFalse(quoted)).toHaveLength(1);
     const forced = ["      - uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0", "        with:", "          force: true"].join("\n");
