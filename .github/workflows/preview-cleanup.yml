@@ -17,9 +17,11 @@ on:
     - cron: '17 4 * * *'
   workflow_dispatch:
 
+# pull-requests: write lets the job edit the "View preview" comment that deploy.yml posted, so it
+# stops linking to a preview that no longer exists. The job never creates comments.
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: preview-cleanup
@@ -42,6 +44,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          # The PR whose close triggered this run. Empty on the schedule and on workflow_dispatch.
+          CLOSED_PR: ${{ github.event.pull_request.number }}
           GIT_AUTHOR_NAME: github-actions[bot]
           GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
           GIT_COMMITTER_NAME: github-actions[bot]
@@ -49,11 +53,17 @@ jobs:
         run: |
           set -euo pipefail
 
+          # The marker marocchino/sticky-pull-request-comment writes for rossjrw/pr-preview-action's
+          # `header: pr-preview`. It identifies the "View preview" comment deploy.yml posts on a PR.
+          marker='<!-- Sticky Pull Request Commentpr-preview -->'
+
           # Removes every pr-preview/pr-<digits> directory whose PR is not open and commits the result.
           # The open list is fetched fresh on every call, so a PR reopened mid-run keeps its new preview.
           # Called as a plain statement, never inside `if`, so set -e stays in force inside it.
+          # The PR number of every directory in the commit is appended to `removed`, and the open list
+          # stays in `open` for mark_removed.
           remove_stale() {
-            local open_json open dirs dir n
+            local open_json dirs dir n list=""
             # Open PRs to any base. If this fails, set -e stops the job here and nothing is removed.
             open_json=$(gh pr list --state open --limit 1000 --json number)
             jq -e 'type == "array"' <<<"$open_json" >/dev/null
@@ -69,6 +79,7 @@ jobs:
               else
                 echo "remove $dir"
                 git rm -r -q -- "$dir"
+                list+="$n"$'\n'
               fi
             done <<<"$dirs"
 
@@ -77,18 +88,74 @@ jobs:
             fi
             git commit -q -m "Remove previews of closed PRs"
             pending=1
+            removed+="$list"
+          }
+
+          # Rewrites the "View preview" comment on PR #$1 to say the preview was removed, so it no longer
+          # links to a URL that returns 404. Keeps the marker, so the deploy after a reopen updates this
+          # same comment back to "View preview" instead of adding a second one. Never creates a comment.
+          # Cosmetic, so every failure is a warning and the function always returns 0.
+          mark_removed_on() {
+            local n="$1" ids id body
+            if ! ids=$(gh api --paginate "repos/$GH_REPO/issues/$n/comments" \
+                --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id"); then
+              echo "::warning::Could not list the comments on PR #$n, so its preview comment was not updated."
+              return 0
+            fi
+            id="${ids%%$'\n'*}"
+            if [ -z "$id" ]; then
+              echo "PR #$n has no preview comment to update."
+              return 0
+            fi
+            if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+              echo "::warning::The preview comment lookup on PR #$n returned '$id', not a comment ID."
+              return 0
+            fi
+            body="[Preview cleanup]($GITHUB_SERVER_URL/$GH_REPO/actions/runs/$GITHUB_RUN_ID)
+          :---:
+          Preview removed because the pull request was closed.
+          $(date -u '+%Y-%m-%d %H:%M UTC')
+          $marker"
+            if ! gh api -X PATCH "repos/$GH_REPO/issues/comments/$id" --silent -f body="$body"; then
+              echo "::warning::Could not edit the preview comment $id on PR #$n."
+              return 0
+            fi
+            echo "Marked the preview on PR #$n as removed (comment $id)."
+          }
+
+          # Updates the comment on every PR whose directory this run pushed as removed, plus the PR that
+          # closed to trigger the run (its directory may have gone in an earlier run). Only called once
+          # nothing is left to push, so a comment never says "removed" while the preview is still live.
+          # The triggering PR may have been reopened while this run waited its turn: then it is in the open
+          # list fetched by the last remove_stale call, its preview was kept, and its comment is left alone.
+          mark_removed() {
+            local n
+            for n in $(printf '%s\n' "$removed" "$CLOSED_PR" | sort -un); do
+              [[ "$n" =~ ^[0-9]+$ ]] || continue
+              n=$((10#$n))
+              if grep -qxF -- "$n" <<<"$open"; then
+                echo "PR #$n is open again. Leaving its preview comment alone."
+                continue
+              fi
+              mark_removed_on "$n"
+            done
           }
 
           # pending is set while a commit is waiting to be pushed. A rebase keeps it; a reset clears it.
+          # removed lists the PR numbers of the directories in that commit, and follows pending.
           pending=""
+          removed=""
+          open=""
           for attempt in 1 2 3 4 5; do
             remove_stale
             if [ -z "$pending" ]; then
               echo "No stale previews. Nothing to commit."
+              mark_removed
               exit 0
             fi
             if git push origin HEAD:gh-pages; then
               echo "Stale previews removed."
+              mark_removed
               exit 0
             fi
             echo "Push rejected (gh-pages moved, or no write access). Rebasing and retrying (attempt $attempt of 5)."
@@ -97,6 +164,7 @@ jobs:
               git rebase --abort || true
               git reset -q --hard FETCH_HEAD
               pending=""
+              removed=""
             fi
           done
           echo "Could not push after 5 attempts."

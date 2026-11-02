@@ -72,7 +72,7 @@ jobs:
           folder: out
           target-folder: dev
 
-      - name: Publish or remove PR preview
+      - name: Publish PR preview
         if: steps.target.outputs.kind == 'preview'
         uses: rossjrw/pr-preview-action@v1
         with:
