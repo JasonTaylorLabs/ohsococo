@@ -9,6 +9,8 @@ import {
   signupMailto,
   signupProviderName,
   signupStep,
+  submitSignup,
+  type SignupUi,
 } from "../../src/lib/signup";
 
 const ENDPOINT = "https://example.invalid/subscribe";
@@ -125,5 +127,110 @@ describe("signupProviderName", () => {
     // Look-alikes are not Formspree.
     expect(signupProviderName("https://notformspree.io/f/abc")).toBe("notformspree.io");
     expect(signupProviderName("https://formspree.io.example.com/f/abc")).toBe("formspree.io.example.com");
+  });
+});
+
+describe("submitSignup", () => {
+  // Every UI call, in order, as [name, arg].
+  function recordingUi() {
+    const calls: [string, string][] = [];
+    const ui: SignupUi = {
+      setStatus: (status) => calls.push(["setStatus", status]),
+      setMessage: (message) => calls.push(["setMessage", message]),
+      setEmail: (email) => calls.push(["setEmail", email]),
+      navigate: (href) => calls.push(["navigate", href]),
+    };
+    return { calls, ui };
+  }
+
+  it("honeypot filled makes no UI calls and no request", async () => {
+    const { calls, ui } = recordingUi();
+    const fetchMock = fetchReturning();
+    await submitSignup("test@example.com", "http://spam.example", ENDPOINT, site.email, ui, fetchMock);
+    expect(calls).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('invalid email sets error then "Enter a valid email."', async () => {
+    const { calls, ui } = recordingUi();
+    const fetchMock = fetchReturning();
+    await submitSignup("not-an-email", null, ENDPOINT, site.email, ui, fetchMock);
+    expect(calls).toEqual([
+      ["setStatus", "error"],
+      ["setMessage", MESSAGE_INVALID],
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("no endpoint navigates to the mailto href, then shows the email-app message", async () => {
+    const { calls, ui } = recordingUi();
+    const fetchMock = fetchReturning();
+    await submitSignup("  Test@Example.COM  ", null, undefined, site.email, ui, fetchMock);
+    expect(calls).toEqual([
+      [
+        "navigate",
+        `mailto:${site.email}?subject=Add%20me%20to%20the%20Oh%20So%20Coco%20drop%20list&body=Please%20add%20test%40example.com%20to%20the%20drop%20announcement%20list.`,
+      ],
+      ["setStatus", "done"],
+      ["setMessage", MESSAGE_MAILTO],
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("post sets loading before fetching", async () => {
+    const { calls, ui } = recordingUi();
+    let callsAtFetch: [string, string][] | undefined;
+    const fetchMock = vi.fn<typeof fetch>(async () => {
+      callsAtFetch = [...calls];
+      return new Response(null, { status: 200 });
+    });
+    await submitSignup("test@example.com", null, ENDPOINT, site.email, ui, fetchMock);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(callsAtFetch).toEqual([["setStatus", "loading"]]);
+  });
+
+  it("post sends the trimmed lowercased email, not the raw input", async () => {
+    const { ui } = recordingUi();
+    const fetchMock = fetchReturning(200);
+    await submitSignup("  Test@Example.COM  ", null, ENDPOINT, site.email, ui, fetchMock);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(ENDPOINT);
+    expect(init?.body).toBe('{"email":"test@example.com","source":"ohsococo-landing"}');
+  });
+
+  it("2xx shows the success message and clears the input", async () => {
+    const { calls, ui } = recordingUi();
+    await submitSignup("test@example.com", null, ENDPOINT, site.email, ui, fetchReturning(200));
+    expect(calls).toEqual([
+      ["setStatus", "loading"],
+      ["setStatus", "done"],
+      ["setMessage", MESSAGE_SUCCESS],
+      ["setEmail", ""],
+    ]);
+  });
+
+  it("non-2xx shows the failure message and keeps the input", async () => {
+    const { calls, ui } = recordingUi();
+    await submitSignup("test@example.com", null, ENDPOINT, site.email, ui, fetchReturning(500));
+    expect(calls).toEqual([
+      ["setStatus", "loading"],
+      ["setStatus", "error"],
+      ["setMessage", MESSAGE_FAILED],
+    ]);
+  });
+
+  it("fetch throwing shows the failure message and keeps the input", async () => {
+    const { calls, ui } = recordingUi();
+    const fetchMock = vi.fn<typeof fetch>(async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    await submitSignup("test@example.com", null, ENDPOINT, site.email, ui, fetchMock);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual([
+      ["setStatus", "loading"],
+      ["setStatus", "error"],
+      ["setMessage", MESSAGE_FAILED],
+    ]);
   });
 });

@@ -2,46 +2,24 @@
 
 import { useState } from "react";
 import { site } from "@/content/site";
-import {
-  MESSAGE_FAILED,
-  MESSAGE_INVALID,
-  MESSAGE_MAILTO,
-  MESSAGE_SUCCESS,
-  SUBSCRIBE_ENDPOINT,
-  postSignup,
-  signupMailto,
-  signupStep,
-} from "@/lib/signup";
-
-type Status = "idle" | "loading" | "done" | "error";
+import { SUBSCRIBE_ENDPOINT, submitSignup, type SignupStatus } from "@/lib/signup";
 
 /** Drop-list signup form; the submission rules (endpoint, honeypot, validation, mailto fallback) live in `@/lib/signup`. */
 export function SignupForm() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<SignupStatus>("idle");
   const [message, setMessage] = useState("");
-  const show = (next: Status, text: string) => {
-    setStatus(next);
-    setMessage(text);
-  };
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const step = signupStep(email, new FormData(e.currentTarget).get("website"), SUBSCRIBE_ENDPOINT);
-    if (step.kind === "ignore") return; // honeypot
-    if (step.kind === "invalid") return show("error", MESSAGE_INVALID);
-    if (step.kind === "mailto") {
-      window.location.href = signupMailto(step.email, site.email);
-      return show("done", MESSAGE_MAILTO);
-    }
-
-    setStatus("loading");
-    if (await postSignup(step.endpoint, step.email)) {
-      show("done", MESSAGE_SUCCESS);
-      setEmail("");
-    } else {
-      show("error", MESSAGE_FAILED);
-    }
+    await submitSignup(email, new FormData(e.currentTarget).get("website"), SUBSCRIBE_ENDPOINT, site.email, {
+      setStatus,
+      setMessage,
+      setEmail,
+      navigate: (href) => {
+        window.location.href = href;
+      },
+    });
   }
 
   if (status === "done") {

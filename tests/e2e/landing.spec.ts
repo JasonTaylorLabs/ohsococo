@@ -64,6 +64,16 @@ test("signup fine print with no endpoint names no provider", async ({ page }) =>
   await expect(page.getByText("Your email is sent to")).toHaveCount(0);
 });
 
+test("signup with no endpoint opens the mailto link to the site address", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Email address").fill("  Test@Example.COM  ");
+  const mailto = page.waitForRequest((r) => r.url().startsWith("mailto:"));
+  await page.getByRole("button", { name: "Notify me" }).click();
+  expect((await mailto).url()).toBe(
+    `mailto:${site.email}?subject=Add%20me%20to%20the%20Oh%20So%20Coco%20drop%20list&body=Please%20add%20test%40example.com%20to%20the%20drop%20announcement%20list.`,
+  );
+});
+
 test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Tab");
