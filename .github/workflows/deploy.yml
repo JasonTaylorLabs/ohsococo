@@ -78,7 +78,7 @@ jobs:
           target-folder: dev
           force: false
 
-      - name: Publish or remove PR preview
+      - name: Publish PR preview
         if: steps.target.outputs.kind == 'preview'
         uses: rossjrw/pr-preview-action@873417d2df72380da1f3978378fb58560bcde976 # v1.8.2
         with:

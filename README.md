@@ -79,6 +79,10 @@ https://jasontaylorlabs.github.io/ohsococo/
 `NEXT_PUBLIC_BASE_PATH` is `/ohsococo` for the project-site URL. When a custom
 domain is attached, clear it and update `site.url` in `src/content/site.ts`.
 
+`.github/workflows/preview-cleanup.yml` removes the preview of every closed PR
+and rewrites its "View preview" comment. Its unit test runs the workflow's
+script for real, so `npm test` needs `bash`, `git` and `jq` on `PATH`.
+
 ## Roadmap
 
 See the PRD for V2 (menu, gallery, custom request form, CMS), V3 (paid preorder
