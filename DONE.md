@@ -1,0 +1,6 @@
+## Changes
+
+- **src/components/SignupForm.tsx**: Added `useEffect` + `useRef` imports and `MESSAGE_INVALID` from signup. Added `doneRef` + `useEffect` to focus the success `<p>` on `status === "done"`. Added `ref={doneRef}` and `tabIndex={-1}` to the success message so focused elements are announced (WCAG 4.1.3). Added `id="signup-error"` to the error `<p role="alert">`. Added `aria-invalid` (only for invalid email) and `aria-describedby="signup-error"` to the email input so screen readers link errors to fields (WCAG 3.3.1, 1.3.1).
+- **tests/e2e/landing.spec.ts**: Added "signup error is linked to the email field" (checks aria attributes + accessible description) and "after signup, focus moves to the confirmation message" (checks `document.activeElement` is `<P>` not `<BODY>`, via Enter key press).
+
+Mutation checks for criterion 7: removing `aria-describedby` makes `toHaveAccessibleDescription("Enter a valid email.")` fail; removing the `useEffect` focus call makes `toBeFocused()` on the success message fail. Both assertions pass after reapplying the code.
