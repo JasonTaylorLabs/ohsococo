@@ -24,11 +24,13 @@ export function asset(path: string): string {
 }
 
 /**
- * Absolute production URL for `path`. Never adds the base path: `site.url` already ends in it
- * (see commit e16eca6). Every build, including dev and previews, advertises production.
+ * Absolute production URL for `path`. The home URL ends in `/` because of `trailingSlash: true`
+ * so GitHub Pages serves it with a trailing slash and search engines see the correct address.
+ * For every other path, never adds the base path: `site.url` already ends in it (see commit e16eca6).
+ * Every build, including dev and previews, advertises production.
  */
 export function absoluteUrl(path = ""): string {
-  if (path === "") return site.url;
+  if (path === "" || path === "/") return `${site.url}/`;
   return `${site.url}${withLeadingSlash(path)}`;
 }
 

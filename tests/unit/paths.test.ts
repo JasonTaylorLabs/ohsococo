@@ -119,10 +119,18 @@ async function loadAbsoluteUrl(base?: string) {
 }
 
 describe("absoluteUrl", () => {
-  it("returns site.url unchanged with no argument", async () => {
+  it('home url carries the trailing slash GitHub Pages serves because of trailingSlash: true', async () => {
     const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
-    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo");
-    expect(absoluteUrl("")).toBe("https://jasontaylorlabs.github.io/ohsococo");
+    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("/")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+  });
+
+  it("home url with dev base path is still the production home url", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo/dev");
+    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("/")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
   });
 
   it("appends a path that starts with a slash", async () => {

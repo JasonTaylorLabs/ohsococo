@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    url: site.url,
+    url: absoluteUrl("/"),
     siteName: site.name,
     locale: "en_US",
     type: "website",
@@ -56,7 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     "@type": "Bakery",
     name: site.name,
     description,
-    url: site.url,
+    url: absoluteUrl("/"),
     email: site.email,
     image: absoluteUrl("/og.png"),
     logo: absoluteUrl("/logo.svg"),
