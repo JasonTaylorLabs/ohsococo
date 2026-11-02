@@ -7,6 +7,7 @@ import {
   MESSAGE_SUCCESS,
   postSignup,
   signupMailto,
+  signupProviderName,
   signupStep,
   submitSignup,
   type SignupUi,
@@ -97,6 +98,35 @@ describe("postSignup", () => {
 
   it(`success message is "You're on the list. Drop announcements coming your way."`, () => {
     expect(MESSAGE_SUCCESS).toBe("You're on the list. Drop announcements coming your way.");
+  });
+});
+
+describe("signupProviderName", () => {
+  it("no endpoint names nobody", () => {
+    expect(signupProviderName(undefined)).toBeNull();
+    expect(signupProviderName("")).toBeNull();
+  });
+
+  it("an endpoint that is not a URL names nobody", () => {
+    expect(signupProviderName("not a url")).toBeNull();
+    expect(signupProviderName("formspree.io/f/abc")).toBeNull();
+    expect(signupProviderName("mailto:hello@example.com")).toBeNull();
+  });
+
+  it('formspree.io is "Formspree"', () => {
+    expect(signupProviderName("https://formspree.io/f/abc")).toBe("Formspree");
+  });
+
+  it('a *.formspree.io host is "Formspree"', () => {
+    expect(signupProviderName("https://api.formspree.io/f/abc")).toBe("Formspree");
+  });
+
+  it("any other endpoint is named by its hostname", () => {
+    expect(signupProviderName(ENDPOINT)).toBe("example.invalid");
+    expect(signupProviderName("https://hooks.zapier.com/hooks/catch/1/abc/")).toBe("hooks.zapier.com");
+    // Look-alikes are not Formspree.
+    expect(signupProviderName("https://notformspree.io/f/abc")).toBe("notformspree.io");
+    expect(signupProviderName("https://formspree.io.example.com/f/abc")).toBe("formspree.io.example.com");
   });
 });
 
