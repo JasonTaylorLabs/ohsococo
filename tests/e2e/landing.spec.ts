@@ -307,44 +307,33 @@ test("signup label stays visible above the email field and its text meets contra
     const input = page.getByLabel("Email address");
     const label = page.locator('label[for="signup-email"]');
 
-    // Label visible with correct text
-    await expect(label).toBeVisible();
-    await expect(label).toHaveText("Email address");
+    for (const typed of ["", "not-an-email"]) {
+      await input.fill(typed);
+      await expect(label).toBeVisible();
+      await expect(label).toHaveText("Email address");
 
-    // Label's bottom edge must be at or above the input's top edge
-    const labelBox = (await label.boundingBox())!;
-    const inputBox = (await input.boundingBox())!;
-    expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(inputBox.y + 1);
+      // Measure both in one call: fill() may still be smooth-scrolling the page.
+      // An sr-only label is a 1x1 box that Playwright still counts as visible.
+      const [labelBox, inputBox] = await input.evaluate((el) => {
+        const labelRect = document.querySelector('label[for="signup-email"]')!.getBoundingClientRect();
+        const inputRect = el.getBoundingClientRect();
+        return [labelRect, inputRect].map(({ y, width, height }) => ({ y, width, height }));
+      });
+      expect(labelBox.height).toBeGreaterThanOrEqual(14);
+      expect(labelBox.width).toBeGreaterThanOrEqual(80);
+      expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(inputBox.y + 1);
+      expect(inputBox.y - (labelBox.y + labelBox.height)).toBeLessThanOrEqual(24);
+    }
 
-    // Fill with invalid email - label should still be visible
-    await input.fill("not-an-email");
-    await expect(label).toBeVisible();
-    await expect(label).toHaveText("Email address");
+    await page.getByRole("button", { name: "Notify me" }).click();
+    const alert = page.getByRole("alert").filter({ hasText: "Enter a valid email." });
+    await expect(alert).toHaveText("Enter a valid email.");
+    await expect(alert).toHaveCSS("color", "rgb(196, 61, 112)");
   }
 
-  // After submit: assertion shows Enter a valid email. in #c43d70
-  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
-  const input = page.getByLabel("Email address");
-  await input.fill("not-an-email");
-  await page.getByRole("button", { name: "Notify me" }).click();
-  const alert = page.getByRole("alert").filter({ hasText: "Enter a valid email." });
-  await expect(alert).toHaveText("Enter a valid email.");
-
-  // Colour from computed style
-  const color = await page.getByRole("alert").filter({ hasText: "Enter a valid email." }).evaluate((el) => {
-    return getComputedStyle(el).color;
-  });
-  expect(color).toBe("rgb(196, 61, 112)");
-});
-
-test("placeholder text colour meets WCAG AA on the email input", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await page.goto("/");
-  const input = page.getByLabel("Email address");
-  await expect(input).toBeVisible();
-  const color = await input.evaluate((el) => {
-    return getComputedStyle(el, "::placeholder").color;
-  });
-  expect(color).toBe("rgb(154, 106, 69)");
+  const placeholderColor = await page
+    .getByLabel("Email address")
+    .evaluate((el) => getComputedStyle(el, "::placeholder").color);
+  expect(placeholderColor).toBe("rgb(154, 106, 69)");
 });

@@ -15,20 +15,13 @@ function readToken(name: string): string {
   return match[1];
 }
 
-function hexFromToken(name: string): string {
-  const token = readToken(name);
-  if (/^#[0-9a-fA-F]{6}$/.test(token)) return token;
-  throw new Error(`Token ${name} is not a plain hex value: ${token}`);
-}
-
-// Relative luminance from a hex string.
-function sRGB(linear: number): number {
-  return linear <= 0.03928 ? linear / 12.92 : ((linear + 0.055) / 1.055) ** 2.4;
+function toLinear(channel: number): number {
+  return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
 }
 
 function relativeLuminance(hex: string): number {
   const channels = [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16) / 255);
-  return 0.2126 * sRGB(channels[0]) + 0.7152 * sRGB(channels[1]) + 0.0722 * sRGB(channels[2]);
+  return 0.2126 * toLinear(channels[0]) + 0.7152 * toLinear(channels[1]) + 0.0722 * toLinear(channels[2]);
 }
 
 function contrast(a: string, b: string): number {
@@ -94,7 +87,7 @@ describe("signup form contrast (WCAG AA, Issue #53)", () => {
   });
 
   it("pink-700 on cream-50 meets 4.5:1", () => {
-    const ratio = contrast(hexFromToken("pink-700"), hexFromToken("cream-50"));
+    const ratio = contrast(readToken("pink-700"), readToken("cream-50"));
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -106,7 +99,7 @@ describe("signup form contrast (WCAG AA, Issue #53)", () => {
   });
 
   it("cocoa-600 on white input meets 4.5:1", () => {
-    const ratio = contrast(hexFromToken("cocoa-600"), "#ffffff");
+    const ratio = contrast(readToken("cocoa-600"), "#ffffff");
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
