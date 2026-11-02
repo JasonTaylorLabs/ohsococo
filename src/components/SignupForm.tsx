@@ -32,7 +32,7 @@ export function SignupForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap" noValidate>
-      <label className="sr-only" htmlFor="signup-email">
+      <label className="basis-full px-6 text-left text-sm font-semibold text-cocoa-800" htmlFor="signup-email">
         Email address
       </label>
       <input
@@ -45,7 +45,7 @@ export function SignupForm() {
         placeholder="you@email.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-200 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600/60 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
+        className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-200 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
       />
       {/* Honeypot field, hidden from people, filled by bots */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
@@ -57,7 +57,7 @@ export function SignupForm() {
         {status === "loading" ? "Adding…" : "Notify me"}
       </button>
       {status === "error" && (
-        <p role="alert" className="basis-full text-sm font-semibold text-pink-600">
+        <p role="alert" className="basis-full text-sm font-semibold text-pink-700">
           {message}
         </p>
       )}
