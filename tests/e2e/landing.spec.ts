@@ -80,6 +80,20 @@ test("signup error is linked to the email field", async ({ page }) => {
   await expect(page.locator("#signup-error")).toHaveAttribute("role", "alert");
 });
 
+test("submitting the same bad email again re-creates the alert so it is announced again", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("not-an-email");
+  await input.press("Enter");
+  const first = await page.locator("#signup-error").elementHandle();
+  expect(first).not.toBeNull();
+
+  await input.press("Enter");
+  await expect(page.locator("#signup-error")).toHaveText("Enter a valid email.");
+  // An alert that stays in the page with the same text gives screen readers nothing new to read.
+  await expect.poll(() => first!.evaluate((el) => el.isConnected)).toBe(false);
+});
+
 test("signup with no endpoint shows the email-app message", async ({ page }) => {
   await page.goto("/");
   await page.getByLabel("Email address").fill("  Test@Example.COM  ");

@@ -9,6 +9,8 @@ export function SignupForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<SignupStatus>("idle");
   const [message, setMessage] = useState("");
+  // Keys the error paragraph so a repeated error is a fresh alert that screen readers announce again.
+  const [attempt, setAttempt] = useState(0);
   const doneRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -17,6 +19,7 @@ export function SignupForm() {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setAttempt((n) => n + 1);
     await submitSignup(email, new FormData(e.currentTarget).get("website"), SUBSCRIBE_ENDPOINT, site.email, {
       setStatus,
       setMessage,
@@ -65,6 +68,7 @@ export function SignupForm() {
       </button>
       {status === "error" && (
         <p
+          key={attempt}
           id="signup-error"
           role="alert"
           className="basis-full text-sm font-semibold text-pink-700"
