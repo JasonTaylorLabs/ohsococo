@@ -143,8 +143,46 @@ describe("absoluteUrl", () => {
     expect(absoluteUrl("og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
   });
 
-  it("never adds the base path, so dev and previews still advertise production", async () => {
-    const absoluteUrl = await loadAbsoluteUrl("/ohsococo/dev");
-    expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
-  });
+    it("never adds the base path, so dev and previews still advertise production", async () => {
+      const absoluteUrl = await loadAbsoluteUrl("/ohsococo/dev");
+      expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+    });
+
+    it("tolerates a trailing slash in site.url", async () => {
+      vi.resetModules();
+      vi.stubEnv("NEXT_PUBLIC_BASE_PATH", undefined as unknown as string);
+      vi.doMock("../../src/content/site", () => ({
+        site: { url: "https://ohsococo.com/" },
+      }));
+      const absoluteUrl = (await import("../../src/lib/paths")).absoluteUrl;
+      expect(absoluteUrl()).toBe("https://ohsococo.com/");
+      expect(absoluteUrl("")).toBe("https://ohsococo.com/");
+      expect(absoluteUrl("/")).toBe("https://ohsococo.com/");
+      vi.doUnmock("../../src/content/site");
+    });
+
+    it("tolerates more than one trailing slash in site.url", async () => {
+      vi.resetModules();
+      vi.stubEnv("NEXT_PUBLIC_BASE_PATH", undefined as unknown as string);
+      vi.doMock("../../src/content/site", () => ({
+        site: { url: "https://jasontaylorlabs.github.io/ohsococo//" },
+      }));
+      const absoluteUrl = (await import("../../src/lib/paths")).absoluteUrl;
+      expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+      expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+      vi.doUnmock("../../src/content/site");
+    });
+
+    it("works when site.url has no trailing slash (bare domain)", async () => {
+      vi.resetModules();
+      vi.stubEnv("NEXT_PUBLIC_BASE_PATH", undefined as unknown as string);
+      vi.doMock("../../src/content/site", () => ({
+        site: { url: "https://ohsococo.com" },
+      }));
+      const absoluteUrl = (await import("../../src/lib/paths")).absoluteUrl;
+      expect(absoluteUrl()).toBe("https://ohsococo.com/");
+      expect(absoluteUrl("/sitemap.xml")).toBe("https://ohsococo.com/sitemap.xml");
+      vi.doUnmock("../../src/content/site");
+    });
 });
+
