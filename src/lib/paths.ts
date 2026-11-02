@@ -26,9 +26,10 @@ export function asset(path: string): string {
 /**
  * Absolute production URL for `path`. Never adds the base path: `site.url` already ends in it
  * (see commit e16eca6). Every build, including dev and previews, advertises production.
+ * The home URL (`""` or `"/"`) ends in `/`, the address `trailingSlash: true` serves it at.
  */
 export function absoluteUrl(path = ""): string {
-  if (path === "") return site.url;
+  if (path === "" || path === "/") return `${site.url}/`;
   return `${site.url}${withLeadingSlash(path)}`;
 }
 
