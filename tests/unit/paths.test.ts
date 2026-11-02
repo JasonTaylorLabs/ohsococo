@@ -118,7 +118,14 @@ async function loadAbsoluteUrl(base?: string) {
   return (await import("../../src/lib/paths")).absoluteUrl;
 }
 
+async function loadAbsoluteUrlWithSiteUrl(url: string) {
+  vi.doMock("../../src/content/site", () => ({ site: { url } }));
+  return loadAbsoluteUrl();
+}
+
 describe("absoluteUrl", () => {
+  afterEach(() => vi.doUnmock("../../src/content/site"));
+
   it("home url carries the trailing slash GitHub Pages serves because of trailingSlash: true", async () => {
     const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
     expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
@@ -146,5 +153,27 @@ describe("absoluteUrl", () => {
   it("never adds the base path, so dev and previews still advertise production", async () => {
     const absoluteUrl = await loadAbsoluteUrl("/ohsococo/dev");
     expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+  });
+
+  it("tolerates a trailing slash in site.url", async () => {
+    const absoluteUrl = await loadAbsoluteUrlWithSiteUrl("https://ohsococo.com/");
+    expect(absoluteUrl()).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("")).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("/")).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("/og.png")).toBe("https://ohsococo.com/og.png");
+  });
+
+  it("tolerates more than one trailing slash in site.url", async () => {
+    const absoluteUrl = await loadAbsoluteUrlWithSiteUrl(
+      "https://jasontaylorlabs.github.io/ohsococo//",
+    );
+    expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+  });
+
+  it("works when site.url is a bare domain with no trailing slash", async () => {
+    const absoluteUrl = await loadAbsoluteUrlWithSiteUrl("https://ohsococo.com");
+    expect(absoluteUrl()).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("/sitemap.xml")).toBe("https://ohsococo.com/sitemap.xml");
   });
 });

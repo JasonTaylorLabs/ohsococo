@@ -3,6 +3,9 @@ import { site } from "../content/site";
 /** Deploy base path (e.g. "/ohsococo" on GitHub Pages), read once at build time. */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
+/** Normalise `site.url` so callers never get double slashes if the owner adds a trailing slash. */
+const SITE_URL = site.url.replace(/\/+$/, "");
+
 /**
  * Sub-site folders on the gh-pages branch. They must match `.github/workflows/deploy.yml`;
  * `tests/unit/deploy-layout.test.ts` fails when the two drift apart.
@@ -29,8 +32,8 @@ export function asset(path: string): string {
  * The home URL (`""` or `"/"`) ends in `/`, the address `trailingSlash: true` serves it at.
  */
 export function absoluteUrl(path = ""): string {
-  if (path === "" || path === "/") return `${site.url}/`;
-  return `${site.url}${withLeadingSlash(path)}`;
+  if (path === "" || path === "/") return `${SITE_URL}/`;
+  return `${SITE_URL}${withLeadingSlash(path)}`;
 }
 
 /**
