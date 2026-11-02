@@ -31,7 +31,7 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row" noValidate>
+    <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap" noValidate>
       <label className="sr-only" htmlFor="signup-email">
         Email address
       </label>
