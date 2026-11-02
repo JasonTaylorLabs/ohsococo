@@ -45,15 +45,15 @@ function listOf(text: string, key: string, where: string): string[] {
 }
 
 describe("deploy.yml subsite layout matches SUBSITES in src/lib/paths.ts", () => {
-  const prodBase = baseFor(`github.ref_name }}" = "main"`);
+  const prodBase = baseFor(`"$REF_NAME" = "main"`);
 
   it("dev builds at <prod base>/<SUBSITES.dev>", () => {
-    expect(baseFor(`github.ref_name }}" = "dev"`)).toBe(`${prodBase}/${SUBSITES.dev}`);
+    expect(baseFor(`"$REF_NAME" = "dev"`)).toBe(`${prodBase}/${SUBSITES.dev}`);
   });
 
   it("PR previews build at <prod base>/<umbrella>/<prefix><PR number>", () => {
-    expect(baseFor(`github.event_name }}" = "pull_request"`)).toBe(
-      `${prodBase}/${SUBSITES.previewUmbrella}/${SUBSITES.previewPrefix}\${{ github.event.number }}`,
+    expect(baseFor(`"$EVENT_NAME" = "pull_request"`)).toBe(
+      `${prodBase}/${SUBSITES.previewUmbrella}/${SUBSITES.previewPrefix}$PR_NUMBER`,
     );
   });
 
