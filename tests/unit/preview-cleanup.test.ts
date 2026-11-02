@@ -2,12 +2,12 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 // preview-cleanup.yml removes closed PRs' previews from gh-pages and then rewrites each PR's
 // "View preview" comment (Issue #30). The step's script is run here with bash against a local bare
 // gh-pages repo and a fake `gh` on PATH, so the removal, retry and comment logic are exercised as
-// they run in CI, without the network.
+// they run in CI, without the network. Needs bash, git and jq on PATH (all on ubuntu-latest).
 const root = path.resolve(__dirname, "../..");
 const cleanupYml = readFileSync(path.join(root, ".github/workflows/preview-cleanup.yml"), "utf-8");
 const deployYml = readFileSync(path.join(root, ".github/workflows/deploy.yml"), "utf-8");
@@ -45,6 +45,7 @@ function permission(key: string): string {
 const FAKE_GH = `#!/usr/bin/env bash
 # Fake gh for the preview-cleanup test. State lives in $FAKE_GH_DIR:
 #   open.json          the open PR list (or open.<call>.json for the <call>th "pr list", 1-based)
+#   fail-list          present: "pr list" fails
 #   comments-<n>.json  the issue comments on PR <n> (missing: an empty list)
 #   fail-<n>           present: listing PR <n>'s comments fails
 #   fail-edit-<id>     present: editing comment <id> fails
@@ -54,6 +55,7 @@ set -eu
 # Logged before it is counted: grep -c exits 1 on zero matches, which set -e would turn into a silent death.
 printf '%s\\n' "$*" >> "$FAKE_GH_DIR/calls.log"
 if [ "$1" = pr ] && [ "$2" = list ]; then
+  [ -f "$FAKE_GH_DIR/fail-list" ] && { echo "fake gh: listing open PRs failed" >&2; exit 1; }
   count=$(grep -c '^pr list' "$FAKE_GH_DIR/calls.log")
   if [ -f "$FAKE_GH_DIR/open.$count.json" ]; then cat "$FAKE_GH_DIR/open.$count.json"; else cat "$FAKE_GH_DIR/open.json"; fi
   exit 0
@@ -201,6 +203,14 @@ function expectRemovedBody(body: string) {
   expect(body.trimEnd().endsWith(MARKER)).toBe(true);
 }
 
+beforeAll(() => {
+  // The script and the fake gh both run jq; without it every script test fails with a buried
+  // "jq: command not found", so say so up front.
+  if (spawnSync("jq", ["--version"]).status !== 0) {
+    throw new Error("jq is required on PATH to run tests/unit/preview-cleanup.test.ts");
+  }
+});
+
 beforeEach(() => {
   tmp = mkdtempSync(path.join(tmpdir(), "preview-cleanup-"));
   bare = path.join(tmp, "origin.git");
@@ -248,7 +258,9 @@ describe("deploy.yml", () => {
   });
 });
 
-describe("the cleanup script", () => {
+// Each script test spawns dozens of git, bash and jq processes; the slowest takes ~2 s on a quiet
+// Mac, so give them room when a build or e2e run shares the machine.
+describe("the cleanup script", { timeout: 20_000 }, () => {
   it("removes closed previews, keeps open ones, and marks only the removed PRs' comments", () => {
     seedRemote([1, 2, 3]);
     writeFileSync(path.join(fake, "open.json"), JSON.stringify([{ number: 1 }]));
@@ -272,6 +284,44 @@ describe("the cleanup script", () => {
     expect(edits["200"]).toContain("https://github.com/owner/repo/actions/runs/4242");
     expect(out).toContain("Marked the preview on PR #2 as removed (comment 200).");
     expect(out).not.toContain("::warning::");
+  });
+
+  it("matches PR numbers whole, so an open PR 12 does not keep PR 1's preview or its comment", () => {
+    seedRemote([1, 12]);
+    writeFileSync(path.join(fake, "open.json"), JSON.stringify([{ number: 12 }]));
+    writeFileSync(path.join(fake, "comments-1.json"), JSON.stringify([viewComment(1, 100)]));
+    writeFileSync(path.join(fake, "comments-12.json"), JSON.stringify([viewComment(12, 1200)]));
+    const { status, out } = run({ CLOSED_PR: "1" });
+    expect(status).toBe(0);
+    expect(out).toContain("remove pr-preview/pr-1");
+    expect(out).toContain("keep   pr-preview/pr-12 (PR #12 is open)");
+    expect(out).not.toContain("PR #1 is open again");
+    expect(remoteDirs()).toEqual(["pr-preview/pr-12"]);
+    expect(Object.keys(patched())).toEqual(["100"]);
+  });
+
+  it("stops before removing anything when the open PR list cannot be fetched", () => {
+    // The open list is the only thing between a failed API call and deleting every live preview.
+    seedRemote([1, 2]);
+    writeFileSync(path.join(fake, "fail-list"), "");
+    writeFileSync(path.join(fake, "comments-2.json"), JSON.stringify([viewComment(2, 200)]));
+    const { status, out } = run({ CLOSED_PR: "2" });
+    expect(status).not.toBe(0);
+    expect(out).not.toContain("remove pr-preview");
+    expect(remoteDirs()).toEqual(["pr-preview/pr-1", "pr-preview/pr-2"]);
+    expect(patched()).toEqual({});
+  });
+
+  it("stops before removing anything when the open PR list is not a JSON array", () => {
+    // An object whose values still answer `.[].number`, so only the array check can catch it.
+    seedRemote([1, 2]);
+    writeFileSync(path.join(fake, "open.json"), JSON.stringify({ first: { number: 1 } }));
+    writeFileSync(path.join(fake, "comments-2.json"), JSON.stringify([viewComment(2, 200)]));
+    const { status, out } = run({ CLOSED_PR: "2" });
+    expect(status).not.toBe(0);
+    expect(out).not.toContain("remove pr-preview");
+    expect(remoteDirs()).toEqual(["pr-preview/pr-1", "pr-preview/pr-2"]);
+    expect(patched()).toEqual({});
   });
 
   it("marks the closing PR's comment on the no-stale path, and exits 0", () => {
