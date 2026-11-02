@@ -332,7 +332,7 @@ test("signup label stays visible above the email field and its text meets contra
   await expect(alert).toHaveText("Enter a valid email.");
 
   // Colour from computed style
-  const color = await page.locator("[role=alert]").evaluate((el) => {
+  const color = await page.getByRole("alert").filter({ hasText: "Enter a valid email." }).evaluate((el) => {
     return getComputedStyle(el).color;
   });
   expect(color).toBe("rgb(196, 61, 112)");
