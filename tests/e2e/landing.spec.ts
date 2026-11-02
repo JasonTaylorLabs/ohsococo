@@ -232,34 +232,35 @@ test("every gallery photo loads", async ({ page }) => {
 });
 
 test("signup email input is as tall as the Notify me button on phones and fills the row on desktop", async ({ page }) => {
-
-  async function measure() {
-    const inputBox = await page.getByLabel("Email address").boundingBox();
-    const buttonBox = await page.getByRole("button", { name: "Notify me" }).boundingBox();
-    return { inputBox, buttonBox };
+  async function measure(width: number) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+    const input = page.getByLabel("Email address");
+    const form = page.locator("form").filter({ has: input });
+    const boxes = [
+      await form.boundingBox(),
+      await input.boundingBox(),
+      await page.getByRole("button", { name: "Notify me" }).boundingBox(),
+    ];
+    expect(boxes).not.toContain(null);
+    const [f, i, b] = boxes as NonNullable<(typeof boxes)[number]>[];
+    return { f, i, b };
   }
 
-  // --- phone viewport 320px ---
-  await page.setViewportSize({ width: 320, height: 800 });
-  await page.goto("/");
-  await expect(page.getByLabel("Email address")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Notify me" })).toBeVisible();
-  const phones320 = await measure();
-  expect(phones320.inputBox?.height).toBeGreaterThan(43);
-  expect(phones320.buttonBox?.height).toBeGreaterThan(43);
-  expect(Math.abs(phones320.inputBox!.height - phones320.buttonBox!.height)).toBeLessThanOrEqual(1);
+  for (const width of [320, 390]) {
+    const { i, b } = await measure(width);
+    expect(i.height).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(i.height - b.height)).toBeLessThanOrEqual(1);
+    // The button sits below the input, the same full width.
+    expect(b.y).toBeGreaterThanOrEqual(i.y + i.height);
+    expect(Math.abs(b.width - i.width)).toBeLessThanOrEqual(1);
+  }
 
-  // --- phone viewport 390px ---
-  await page.setViewportSize({ width: 390, height: 800 });
-  const phones390 = await measure();
-  expect(phones390.inputBox?.height).toBeGreaterThan(43);
-  expect(phones390.buttonBox?.height).toBeGreaterThan(43);
-  expect(Math.abs(phones390.inputBox!.height - phones390.buttonBox!.height)).toBeLessThanOrEqual(1);
-
-  // --- desktop viewport 1280px ---
-  await page.setViewportSize({ width: 1280, height: 800 });
-  const desktop = await measure();
-  expect(Math.abs(desktop.inputBox!.y - desktop.buttonBox!.y)).toBeLessThanOrEqual(1);
-  expect(Math.abs(desktop.inputBox!.height - desktop.buttonBox!.height)).toBeLessThanOrEqual(1);
-  expect(desktop.inputBox!.width).toBeGreaterThan(desktop.buttonBox!.width ?? 0);
+  // One row: same top, same height, and the input reaches from the form's left edge to the button.
+  const { f, i, b } = await measure(1280);
+  expect(Math.abs(i.y - b.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(i.height - b.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(i.x - f.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(b.x + b.width - (f.x + f.width))).toBeLessThanOrEqual(1);
+  expect(i.width).toBeGreaterThan(b.width);
 });
