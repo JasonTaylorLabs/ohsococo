@@ -425,3 +425,45 @@ test("every section eyebrow renders in pink-800", async ({ page }) => {
     await expect(p).toHaveCSS("color", "rgb(168, 50, 93)");
   }
 });
+
+async function submitBadEmail(page: Page, width: number) {
+  await page.setViewportSize({ width, height: 800 });
+  await page.goto("/");
+  await page.getByLabel("Email address").fill("not-an-email");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
+}
+
+test("signup error sits directly under the email field on phones", async ({ page }) => {
+  for (const width of [320, 390]) {
+    await submitBadEmail(page, width);
+
+    // Read all rects in one call so scrolling between reads cannot skew them.
+    const r = await page.evaluate(() => {
+      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+      return { input: box("#signup-email"), alert: box("#signup-error"), button: box('#signup button[type="submit"]') };
+    });
+
+    expect(r.alert.top).toBeGreaterThanOrEqual(r.input.bottom - 1);
+    expect(r.alert.bottom).toBeLessThanOrEqual(r.button.top + 1);
+    expect(r.button.top).toBeGreaterThan(r.input.bottom);
+  }
+});
+
+test("signup error text lines up with the label", async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await submitBadEmail(page, width);
+
+    // Left edge of the text itself, not the box.
+    const lefts = await page.evaluate(() => {
+      const textLeft = (selector: string) => {
+        const range = document.createRange();
+        range.selectNodeContents(document.querySelector(selector)!);
+        return range.getClientRects()[0].left;
+      };
+      return { label: textLeft('label[for="signup-email"]'), alert: textLeft("#signup-error") };
+    });
+
+    expect(Math.abs(lefts.label - lefts.alert)).toBeLessThanOrEqual(1);
+  }
+});

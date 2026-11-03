@@ -57,6 +57,14 @@ export function SignupForm() {
         aria-describedby={status === "error" ? "signup-error" : undefined}
         className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-200 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
       />
+      <p
+        key={attempt}
+        id="signup-error"
+        role="alert"
+        className="min-h-5 basis-full px-6 text-left sm:order-last text-sm font-semibold text-pink-700"
+      >
+        {status === "error" ? message : ""}
+      </p>
       {/* Honeypot field, hidden from people, filled by bots */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
       <button
@@ -66,14 +74,6 @@ export function SignupForm() {
       >
         {status === "loading" ? "Adding…" : "Notify me"}
       </button>
-      <p
-        key={attempt}
-        id="signup-error"
-        role="alert"
-        className="min-h-5 basis-full text-sm font-semibold text-pink-700"
-      >
-        {status === "error" ? message : ""}
-      </p>
     </form>
   );
 }
