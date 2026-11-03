@@ -382,3 +382,35 @@ test("signup label stays visible above the email field and its text meets contra
     .evaluate((el) => getComputedStyle(el, "::placeholder").color);
   expect(placeholderColor).toBe("rgb(154, 106, 69)");
 });
+
+test("signup fine print stays put when the error appears", async ({ page }) => {
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+
+    const finePrint = page.locator("#signup p", { hasText: "No spam." });
+    const input = page.getByLabel("Email address");
+
+    const topBefore = await finePrint.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+
+    await input.fill("not-an-email");
+    await page.getByRole("button").click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
+
+    const topAfter = await finePrint.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+
+    expect(Math.abs(topBefore - topAfter)).toBeLessThanOrEqual(1);
+  }
+});
+
+test("signup error slot is present and empty before any submit", async ({ page }) => {
+  await page.goto("/");
+
+  const errorEl = page.locator("#signup-error");
+  await expect(errorEl).toHaveAttribute("role", "alert");
+  await expect(errorEl).toHaveText("");
+
+  const height = await errorEl.evaluate((el) => el.getBoundingClientRect().height);
+  expect(height).toBeGreaterThanOrEqual(19);
+});
