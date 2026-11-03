@@ -158,7 +158,6 @@ describe("signup email input boundary contrast (WCAG 1.4.11, Issue #63)", () => 
   });
 });
 
-// WCAG 1.4.11 - Contrast (minima): the success-message pink ring and the invalid-field border.
 describe("signup email input focus indicator (WCAG 2.4.7 / forced colours, Issue #76)", () => {
   const inputClasses = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/)?.[1] ?? "";
 
@@ -192,6 +191,7 @@ describe("signup email input focus indicator (WCAG 2.4.7 / forced colours, Issue
   });
 });
 
+// WCAG 1.4.11 - Contrast (minima): the success-message pink ring and the invalid-field border.
 describe("signup visual states (Issue #66)", () => {
   it('input className contains aria-invalid:border-pink-700', () => {
     const inputClasses = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/)?.[1] ?? "";
