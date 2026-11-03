@@ -2,10 +2,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SUBSITES } from "../../src/lib/paths";
+import { site } from "../../src/content/site";
 
 // The subsite 404 redirect (Issue #18) only works while these folder names match the deploy
 // workflow. Read the workflow as text and match on keys, never line numbers (Issue #26).
 const root = path.resolve(__dirname, "../..");
+const cleanupYml = readFileSync(path.join(root, ".github/workflows/preview-cleanup.yml"), "utf-8");
 const deployYml = readFileSync(path.join(root, ".github/workflows/deploy.yml"), "utf-8");
 
 function required(match: RegExpMatchArray | null, what: string): string {
@@ -89,5 +91,27 @@ describe("deploy.yml subsite layout matches SUBSITES in src/lib/paths.ts", () =>
     const excluded = listOf(stepFor("production"), "clean-exclude", "the production step");
     expect(excluded).toContain(SUBSITES.dev);
     expect(excluded).toContain(SUBSITES.previewUmbrella);
+  });
+});
+
+describe("preview-cleanup.yml scans the preview folders SUBSITES defines", () => {
+  it("git ls-tree targets SUBSITES.previewUmbrella", () => {
+    const expected = `git ls-tree -d --name-only HEAD -- ${SUBSITES.previewUmbrella}/`;
+    expect(cleanupYml).toContain(expected);
+  });
+
+  it("PR directory regex is built from SUBSITES.previewUmbrella and SUBSITES.previewPrefix", () => {
+    const expected = `[[ "$dir" =~ ^${SUBSITES.previewUmbrella}/${SUBSITES.previewPrefix}([0-9]+)$ ]]`;
+    expect(cleanupYml).toContain(expected);
+  });
+});
+
+// When site.url is a bare custom domain (e.g. https://ohsococo.com), pathname normalises to "",
+// so deploy.yml must echo `base=` (empty) for main. On github.io paths the pathname ends in the repo name.
+describe("production base URL alignment", () => {
+  const prodBase = baseFor(`"$REF_NAME" = "main"`);
+
+  it("site.url pathname matches the prod base path echoed by deploy.yml", () => {
+    expect(new URL(site.url).pathname.replace(/\/+$/, "")).toBe(prodBase);
   });
 });
