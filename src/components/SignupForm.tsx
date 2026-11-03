@@ -66,16 +66,14 @@ export function SignupForm() {
       >
         {status === "loading" ? "Adding…" : "Notify me"}
       </button>
-      {status === "error" && (
-        <p
-          key={attempt}
-          id="signup-error"
-          role="alert"
-          className="basis-full text-sm font-semibold text-pink-700"
-        >
-          {message}
-        </p>
-      )}
+      <p
+        key={attempt}
+        id="signup-error"
+        role="alert"
+        className="min-h-5 basis-full text-sm font-semibold text-pink-700"
+      >
+        {status === "error" ? message : ""}
+      </p>
     </form>
   );
 }
