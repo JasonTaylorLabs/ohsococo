@@ -70,7 +70,7 @@ export function SignupForm() {
       <button
         type="submit"
         disabled={status === "loading"}
-        className="h-14 rounded-full bg-cocoa-800 px-8 text-base font-bold text-cream-50 shadow-soft transition hover:bg-cocoa-900 disabled:opacity-60"
+        className="h-14 border-2 border-transparent rounded-full bg-cocoa-800 px-8 text-base font-bold text-cream-50 shadow-soft transition hover:bg-cocoa-900 disabled:opacity-60"
       >
         {status === "loading" ? "Adding…" : "Notify me"}
       </button>
