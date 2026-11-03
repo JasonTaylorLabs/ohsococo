@@ -158,6 +158,39 @@ describe("signup email input boundary contrast (WCAG 1.4.11, Issue #63)", () => 
   });
 });
 
+describe("signup email input focus indicator (WCAG 2.4.7 / forced colours, Issue #76)", () => {
+  const inputClasses = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/)?.[1] ?? "";
+
+  it("input classes contain focus:outline-2", () => {
+    expect(inputClasses).toMatch(/\bfocus:outline-2\b/);
+  });
+
+  it("input classes contain focus:outline-offset-2", () => {
+    expect(inputClasses).toMatch(/\bfocus:outline-offset-2\b/);
+  });
+
+  it("input classes contain focus:outline-pink-700", () => {
+    expect(inputClasses).toContain("focus:outline-pink-700");
+  });
+
+  it("input classes do not contain focus:outline-none", () => {
+    expect(inputClasses).not.toMatch(/(^|\s)focus:outline-none(\s|$)/);
+  });
+
+  it("input classes do not contain focus:ring-", () => {
+    expect(inputClasses).not.toMatch(/\bfocus:ring-/);
+  });
+
+  it("input classes still contain focus:border-pink-500", () => {
+    expect(inputClasses).toContain("focus:border-pink-500");
+  });
+
+  it("pink-700 on cream-50 meets 3:1", () => {
+    const ratio = contrast(readToken("pink-700"), readToken("cream-50"));
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+});
+
 // WCAG 1.4.11 - Contrast (minima): the success-message pink ring and the invalid-field border.
 describe("signup visual states (Issue #66)", () => {
   it('input className contains aria-invalid:border-pink-700', () => {
