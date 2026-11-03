@@ -394,7 +394,7 @@ test("signup fine print stays put when the error appears", async ({ page }) => {
     const topBefore = await finePrint.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
 
     await input.fill("not-an-email");
-    await page.getByRole("button").click();
+    await page.getByRole("button", { name: "Notify me" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
 
