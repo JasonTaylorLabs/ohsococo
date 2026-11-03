@@ -467,3 +467,13 @@ test("signup error text lines up with the label", async ({ page }) => {
     expect(Math.abs(lefts.label - lefts.alert)).toBeLessThanOrEqual(1);
   }
 });
+
+test("signup email field outline meets 3:1 at rest and turns pink on focus", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("test@example.com");
+  await input.blur();
+  await expect(input).toHaveCSS("border-top-color", "rgb(154, 106, 69)");
+  await input.focus();
+  await expect(input).toHaveCSS("border-top-color", "rgb(232, 93, 138)");
+});

@@ -131,3 +131,29 @@ describe("section eyebrow contrast (WCAG AA, Issue #62)", () => {
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe("signup email input boundary contrast (WCAG 1.4.11, Issue #63)", () => {
+  const inputClasses = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/)?.[1] ?? "";
+
+  it("input has border-cocoa-600", () => {
+    expect(inputClasses).toMatch(/(^|\s)border-cocoa-600(\s|$)/);
+  });
+
+  it("input does not contain border-cocoa-200", () => {
+    expect(inputClasses).not.toMatch(/(^|\s)border-cocoa-200(\s|$)/);
+  });
+
+  it("input still has focus:border-pink-500", () => {
+    expect(inputClasses).toMatch(/\bfocus:border-pink-500\b/);
+  });
+
+  it("cocoa-600 on cream-50 meets 3:1 (WCAG 1.4.11 AA minimum)", () => {
+    const ratio = contrast(readToken("cocoa-600"), readToken("cream-50"));
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+
+  it("cocoa-600 on white meets 3:1 (WCAG 1.4.11 AA minimum)", () => {
+    const ratio = contrast(readToken("cocoa-600"), "#ffffff");
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+});
