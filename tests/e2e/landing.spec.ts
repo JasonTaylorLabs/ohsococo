@@ -425,3 +425,13 @@ test("every section eyebrow renders in pink-800", async ({ page }) => {
     await expect(p).toHaveCSS("color", "rgb(168, 50, 93)");
   }
 });
+
+test("signup email field outline meets 3:1 at rest and turns pink on focus", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("test@example.com");
+  await input.blur();
+  await expect(input).toHaveCSS("border-top-color", "rgb(154, 106, 69)");
+  await input.focus();
+  await expect(input).toHaveCSS("border-top-color", "rgb(232, 93, 138)");
+});

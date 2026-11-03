@@ -55,7 +55,7 @@ export function SignupForm() {
         onChange={(e) => setEmail(e.target.value)}
         aria-invalid={status === "error" && message === MESSAGE_INVALID ? true : undefined}
         aria-describedby={status === "error" ? "signup-error" : undefined}
-        className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-200 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
+        className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-600 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
       />
       {/* Honeypot field, hidden from people, filled by bots */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
