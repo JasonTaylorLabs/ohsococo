@@ -27,7 +27,7 @@ function Section({
     <section id={id} className={`scroll-mt-24 px-4 py-14 sm:py-20 ${className}`}>
       <div className="mx-auto max-w-6xl">
         {eyebrow && (
-          <p className="mb-2 text-center text-sm font-bold uppercase tracking-widest text-pink-500">{eyebrow}</p>
+          <p className="mb-2 text-center text-sm font-bold uppercase tracking-widest text-pink-800">{eyebrow}</p>
         )}
         <h2 className="mb-8 text-center text-3xl font-semibold text-cocoa-900 sm:mb-12 sm:text-4xl">{title}</h2>
         {children}

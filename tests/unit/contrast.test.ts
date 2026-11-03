@@ -110,26 +110,41 @@ describe("signup form contrast (WCAG AA, Issue #53)", () => {
   });
 });
 
+describe("section eyebrow contrast (WCAG AA, Issue #62)", () => {
+  it("eyebrow paragraph uses text-pink-800 and not pink-500/pink-600/pink-700", () => {
+    const eyebrowP = pageSource.match(/<p className="([^"]*)">\{eyebrow\}<\/p>/);
+    expect(eyebrowP).not.toBeNull();
+    const classes = eyebrowP![1];
+    expect(classes).toContain("text-pink-800");
+    expect(classes).not.toContain("text-pink-500");
+    expect(classes).not.toContain("text-pink-600");
+    expect(classes).not.toContain("text-pink-700");
+  });
+
+  it("pink-800 on cream-50 meets 4.5:1", () => {
+    const ratio = contrast(readToken("pink-800"), readToken("cream-50"));
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("pink-800 on cream-100 meets 4.5:1", () => {
+    const ratio = contrast(readToken("pink-800"), readToken("cream-100"));
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
 describe("signup email input boundary contrast (WCAG 1.4.11, Issue #63)", () => {
-  it("input has border-cocoa-600 and does not have border-cocoa-200", () => {
-    const inputMatch = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/);
-    expect(inputMatch).not.toBeNull();
-    const classes = inputMatch![1];
-    expect(classes).toMatch(/(^|\s)border-cocoa-600(\s|$)/);
+  const inputClasses = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/)?.[1] ?? "";
+
+  it("input has border-cocoa-600", () => {
+    expect(inputClasses).toMatch(/(^|\s)border-cocoa-600(\s|$)/);
   });
 
   it("input does not contain border-cocoa-200", () => {
-    const inputMatch = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/);
-    expect(inputMatch).not.toBeNull();
-    const classes = inputMatch![1];
-    expect(classes).not.toMatch(/(^|\s)border-cocoa-200(\s|$)/);
+    expect(inputClasses).not.toMatch(/(^|\s)border-cocoa-200(\s|$)/);
   });
 
   it("input still has focus:border-pink-500", () => {
-    const inputMatch = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/);
-    expect(inputMatch).not.toBeNull();
-    const classes = inputMatch![1];
-    expect(classes).toMatch(/\bfocus:border-pink-500\b/);
+    expect(inputClasses).toMatch(/\bfocus:border-pink-500\b/);
   });
 
   it("cocoa-600 on cream-50 meets 3:1 (WCAG 1.4.11 AA minimum)", () => {

@@ -415,6 +415,17 @@ test("signup error slot is present and empty before any submit", async ({ page }
   expect(height).toBeGreaterThanOrEqual(19);
 });
 
+test("every section eyebrow renders in pink-800", async ({ page }) => {
+  await page.goto("/");
+  const ids = ["treats", "gallery", "occasions", "how", "faq", "signup"];
+  for (const id of ids) {
+    if (id === "gallery" && gallery.length === 0) continue;
+    const p = page.locator(`#${id} > div > p`).first();
+    await expect(p).toBeVisible();
+    await expect(p).toHaveCSS("color", "rgb(168, 50, 93)");
+  }
+});
+
 test("signup email field outline meets 3:1 at rest and turns pink on focus", async ({ page }) => {
   await page.goto("/");
   const input = page.getByLabel("Email address");
