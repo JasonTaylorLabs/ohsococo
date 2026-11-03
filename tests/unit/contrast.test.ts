@@ -157,3 +157,47 @@ describe("signup email input boundary contrast (WCAG 1.4.11, Issue #63)", () => 
     expect(ratio).toBeGreaterThanOrEqual(3);
   });
 });
+
+// WCAG 1.4.11 - Contrast (minima): the success-message pink ring and the invalid-field border.
+describe("signup visual states (Issue #66)", () => {
+  it('input className contains aria-invalid:border-pink-700', () => {
+    const inputClasses = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/)?.[1] ?? "";
+    expect(inputClasses).toContain("aria-invalid:border-pink-700");
+  });
+
+  it('input still contains focus:border-pink-500', () => {
+    const inputClasses = signupFormSource.match(/<input[\s\S]*?className="([^"]*)"/)?.[1] ?? "";
+    expect(inputClasses).toContain("focus:border-pink-500");
+  });
+
+  it('success paragraph contains focus:outline-none, ring-2 and ring-pink-700', () => {
+    const pMatch = signupFormSource.match(/<p[^>]*role="status"[^>]*className="([^"]*)"/);
+    expect(pMatch).not.toBeNull();
+    const classes = pMatch![1];
+    expect(classes).toContain("focus:outline-none");
+    expect(classes).toContain("focus:ring-2");
+    expect(classes).toContain("focus:ring-pink-700");
+  });
+
+  it('success paragraph does not contain ring-pink-500/', () => {
+    const pMatch = signupFormSource.match(/<p[^>]*role="status"[^>]*className="([^"]*)"/);
+    expect(pMatch).not.toBeNull();
+    const classes = pMatch![1];
+    expect(classes).not.toContain("ring-pink-500/");
+  });
+
+  it("pink-700 on cream-50 meets 3:1", () => {
+    const ratio = contrast(readToken("pink-700"), readToken("cream-50"));
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+
+  it("pink-700 on cream-100 meets 3:1", () => {
+    const ratio = contrast(readToken("pink-700"), readToken("cream-100"));
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+
+  it("pink-700 on white meets 3:1 (invalid border against field fill)", () => {
+    const ratio = contrast(readToken("pink-700"), "#ffffff");
+    expect(ratio).toBeGreaterThanOrEqual(3);
+  });
+});

@@ -32,8 +32,8 @@ export function SignupForm() {
 
   if (status === "done") {
     return (
-      <p ref={doneRef} tabIndex={-1} role="status" className="rounded-2xl bg-cream-100 px-5 py-4 text-cocoa-800 font-semibold">
-        🤎 {message}
+      <p ref={doneRef} tabIndex={-1} role="status" className="rounded-2xl bg-cream-100 px-5 py-4 text-cocoa-800 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-700">
+        <span aria-hidden="true">🤎</span> {message}
       </p>
     );
   }
@@ -55,7 +55,7 @@ export function SignupForm() {
         onChange={(e) => setEmail(e.target.value)}
         aria-invalid={status === "error" && message === MESSAGE_INVALID ? true : undefined}
         aria-describedby={status === "error" ? "signup-error" : undefined}
-        className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-600 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600 focus:border-pink-500 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
+        className="h-14 sm:flex-1 rounded-full border-2 border-cocoa-600 bg-white px-6 text-base text-cocoa-900 placeholder:text-cocoa-600 focus:border-pink-500 aria-invalid:border-pink-700 focus:outline-none focus:ring-4 focus:ring-pink-500/20"
       />
       <p
         key={attempt}
