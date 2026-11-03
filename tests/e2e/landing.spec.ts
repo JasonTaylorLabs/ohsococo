@@ -414,3 +414,13 @@ test("signup error slot is present and empty before any submit", async ({ page }
   const height = await errorEl.evaluate((el) => el.getBoundingClientRect().height);
   expect(height).toBeGreaterThanOrEqual(19);
 });
+
+test("signup email field outline meets 3:1 at rest and turns pink on focus", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("test@example.com");
+  await input.blur();
+  await expect(input).toHaveCSS("border-top-color", "rgb(154, 106, 69)");
+  await input.focus();
+  await expect(input).toHaveCSS("border-top-color", "rgb(232, 93, 138)");
+});
