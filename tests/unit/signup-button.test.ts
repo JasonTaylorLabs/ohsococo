@@ -23,4 +23,8 @@ describe("notify me button className (Issue #81)", () => {
   it("still includes h-14", () => {
     expect(submitButtonClasses()).toMatch(/\bh-14\b/);
   });
+
+  it('includes "forced-colors:focus-visible:outline-offset-2"', () => {
+    expect(submitButtonClasses()).toMatch(/(^|\s)forced-colors:focus-visible:outline-offset-2(\s|$)/);
+  });
 });
