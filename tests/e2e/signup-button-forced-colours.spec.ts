@@ -55,6 +55,7 @@ test.describe("notify me button forced-colours focus ring (Issue #85)", () => {
       return {
         outlineOffset: cs.outlineOffset,
         outlineStyle: cs.outlineStyle,
+        outlineWidth: cs.outlineWidth,
         outlineColor: cs.outlineColor,
         borderTopStyle: cs.borderTopStyle,
         borderTopWidth: cs.borderTopWidth,
@@ -62,7 +63,10 @@ test.describe("notify me button forced-colours focus ring (Issue #85)", () => {
     });
 
     expect(computed.outlineOffset).toBe("2px");
-    expect(computed.outlineStyle).not.toBe("none");
+    // Chromium draws an `auto` outline flush against the border whatever the offset,
+    // so a solid outline is what gives the visible gap.
+    expect(computed.outlineStyle).toBe("solid");
+    expect(computed.outlineWidth).toBe("2px");
     expect(computed.outlineColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(computed.borderTopStyle).toBe("solid");
     expect(computed.borderTopWidth).toBe("2px");

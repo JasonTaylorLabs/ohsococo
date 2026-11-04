@@ -25,7 +25,6 @@ describe("notify me button className (Issue #81)", () => {
   });
 
   it('includes "forced-colors:focus-visible:outline-offset-2"', () => {
-    const classes = submitButtonClasses();
-    expect(new RegExp(`(^|\\s)forced-colors:focus-visible:outline-offset-2(\\s|$)`).test(classes)).toBe(true);
+    expect(submitButtonClasses()).toMatch(/(^|\s)forced-colors:focus-visible:outline-offset-2(\s|$)/);
   });
 });
