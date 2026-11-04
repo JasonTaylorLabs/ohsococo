@@ -5,6 +5,10 @@ import { ProductTile } from "@/components/ProductTile";
 import { SignupForm } from "@/components/SignupForm";
 import { faq, gallery, howToOrder, occasions, productLines, site } from "@/content/site";
 import { asset } from "@/lib/paths";
+import { SUBSCRIBE_ENDPOINT, signupProviderName } from "@/lib/signup";
+
+// Named in the fine print under the form; null (nothing added) without an endpoint.
+const signupProvider = signupProviderName(SUBSCRIBE_ENDPOINT);
 
 function Section({
   id,
@@ -23,7 +27,7 @@ function Section({
     <section id={id} className={`scroll-mt-24 px-4 py-14 sm:py-20 ${className}`}>
       <div className="mx-auto max-w-6xl">
         {eyebrow && (
-          <p className="mb-2 text-center text-sm font-bold uppercase tracking-widest text-pink-500">{eyebrow}</p>
+          <p className="mb-2 text-center text-sm font-bold uppercase tracking-widest text-pink-800">{eyebrow}</p>
         )}
         <h2 className="mb-8 text-center text-3xl font-semibold text-cocoa-900 sm:mb-12 sm:text-4xl">{title}</h2>
         {children}
@@ -231,7 +235,10 @@ export default function Home() {
               hit Instagram.
             </p>
             <SignupForm />
-            <p className="mt-3 text-xs text-cocoa-600">No spam. Unsubscribe anytime.</p>
+            <p className="mt-3 text-xs text-cocoa-600">
+              No spam. Unsubscribe anytime.
+              {signupProvider && ` Your email is sent to ${signupProvider} and only used for drop announcements.`}
+            </p>
           </div>
         </Section>
       </main>

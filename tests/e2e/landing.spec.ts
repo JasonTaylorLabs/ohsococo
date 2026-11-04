@@ -28,6 +28,97 @@ test("signup rejects an invalid email", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
 });
 
+test("after signup, focus moves to the confirmation message", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("test@example.com");
+  // Keyboard path: press Enter in the input.
+  await input.press("Enter");
+
+  const status = page.getByRole("status").filter({ hasText: "Your email app should open" });
+  await expect(status).toBeVisible();
+  await expect(status).toBeFocused();
+  await expect(page.evaluate(() => document.activeElement?.tagName)).resolves.toBe("P");
+});
+
+test("signup honeypot filled sends nothing", async ({ page }) => {
+  await page.goto("/");
+  // The honeypot is display:none, so a real user can't fill it; set it the way a bot would.
+  await page.locator('input[name="website"]').evaluate((el: HTMLInputElement) => (el.value = "http://spam.example"));
+  await page.getByLabel("Email address").fill("test@example.com");
+  const urlBefore = page.url();
+  // Scrolling to the form may lazy-load same-origin images, so only a POST or a cross-origin request counts.
+  const sent: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() !== "GET" || new URL(r.url()).origin !== new URL(urlBefore).origin) sent.push(`${r.method()} ${r.url()}`);
+  });
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await page.waitForTimeout(500);
+  // Next's route announcer is an always-present empty alert, so only count ones with text.
+  await expect(page.getByRole("status").filter({ hasText: /\S/ })).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: /\S/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Notify me" })).toBeVisible();
+  expect(sent).toEqual([]);
+  expect(page.url()).toBe(urlBefore);
+});
+
+test("signup error is linked to the email field", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  expect(await input.evaluate((el) => el.hasAttribute("aria-invalid"))).toBe(false);
+  expect(await input.evaluate((el) => el.hasAttribute("aria-describedby"))).toBe(false);
+
+  await input.fill("not-an-email");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
+
+  await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(input).toHaveAttribute("aria-describedby", "signup-error");
+  await expect(input).toHaveAccessibleDescription("Enter a valid email.");
+
+  await expect(page.locator("#signup-error")).toHaveText("Enter a valid email.");
+  await expect(page.locator("#signup-error")).toHaveAttribute("role", "alert");
+});
+
+test("submitting the same bad email again re-creates the alert so it is announced again", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("not-an-email");
+  await input.press("Enter");
+  const first = await page.locator("#signup-error").elementHandle();
+  expect(first).not.toBeNull();
+
+  await input.press("Enter");
+  await expect(page.locator("#signup-error")).toHaveText("Enter a valid email.");
+  // An alert that stays in the page with the same text gives screen readers nothing new to read.
+  await expect.poll(() => first!.evaluate((el) => el.isConnected)).toBe(false);
+});
+
+test("signup with no endpoint shows the email-app message", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Email address").fill("  Test@Example.COM  ");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Your email app should open with a ready-to-send note. Hit send and you're in.",
+  );
+});
+
+test("signup fine print with no endpoint names no provider", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#signup p", { hasText: "No spam." })).toHaveText("No spam. Unsubscribe anytime.");
+  await expect(page.getByText("Your email is sent to")).toHaveCount(0);
+});
+
+test("signup with no endpoint opens the mailto link to the site address", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Email address").fill("  Test@Example.COM  ");
+  const mailto = page.waitForRequest((r) => r.url().startsWith("mailto:"));
+  await page.getByRole("button", { name: "Notify me" }).click();
+  expect((await mailto).url()).toBe(
+    `mailto:${site.email}?subject=Add%20me%20to%20the%20Oh%20So%20Coco%20drop%20list&body=Please%20add%20test%40example.com%20to%20the%20drop%20announcement%20list.`,
+  );
+});
+
 test("pressing Tab focuses the skip-to-content link", async ({ page }) => {
   await page.goto("/");
   await page.keyboard.press("Tab");
@@ -183,4 +274,206 @@ test("every gallery photo loads", async ({ page }) => {
     await img.scrollIntoViewIfNeeded();
     await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
   }
+});
+
+test("signup email input is as tall as the Notify me button on phones and fills the row on desktop", async ({ page }) => {
+  async function measure(width: number) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+    const input = page.getByLabel("Email address");
+    const form = page.locator("form").filter({ has: input });
+    const boxes = [
+      await form.boundingBox(),
+      await input.boundingBox(),
+      await page.getByRole("button", { name: "Notify me" }).boundingBox(),
+    ];
+    expect(boxes).not.toContain(null);
+    const [f, i, b] = boxes as NonNullable<(typeof boxes)[number]>[];
+    return { f, i, b };
+  }
+
+  for (const width of [320, 390]) {
+    const { i, b } = await measure(width);
+    expect(i.height).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(i.height - b.height)).toBeLessThanOrEqual(1);
+    // The button sits below the input, the same full width.
+    expect(b.y).toBeGreaterThanOrEqual(i.y + i.height);
+    expect(Math.abs(b.width - i.width)).toBeLessThanOrEqual(1);
+  }
+
+  // One row: same top, same height, and the input reaches from the form's left edge to the button.
+  const { f, i, b } = await measure(1280);
+  expect(Math.abs(i.y - b.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(i.height - b.height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(i.x - f.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(b.x + b.width - (f.x + f.width))).toBeLessThanOrEqual(1);
+  expect(i.width).toBeGreaterThan(b.width);
+});
+
+test("signup error sits below the email field and Notify me button on wide screens", async ({ page }) => {
+  for (const width of [640, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+    const input = page.getByLabel("Email address");
+    const button = page.getByRole("button", { name: "Notify me" });
+    const form = page.locator("form").filter({ has: input });
+    const alert = page.getByRole("alert").filter({ hasText: "Enter a valid email." });
+    await input.fill("not-an-email");
+    await button.click();
+    await expect(alert).toBeVisible();
+    const boxes = await Promise.all([form.boundingBox(), input.boundingBox(), button.boundingBox(), alert.boundingBox()]);
+    expect(boxes).not.toContain(null);
+    const [f, i, b, a] = boxes as NonNullable<(typeof boxes)[number]>[];
+
+    // Input and button share one row at the same height.
+    expect(Math.abs(i.y - b.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(i.height - b.height)).toBeLessThanOrEqual(1);
+    expect(i.width).toBeGreaterThan(b.width);
+    // The button is a fixed h-14, so its box stays 56 px when the label wraps: count the label's lines instead.
+    const labelLines = await button.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+    expect(labelLines).toBe(1);
+    // The error has its own full-width line below the row.
+    expect(a.y).toBeGreaterThanOrEqual(i.y + i.height);
+    expect(a.y).toBeGreaterThanOrEqual(b.y + b.height);
+    expect(Math.abs(a.x - f.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs(a.width - f.width)).toBeLessThanOrEqual(1);
+  }
+});
+
+test("signup label stays visible above the email field and its text meets contrast", async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+
+    const input = page.getByLabel("Email address");
+    const label = page.locator('label[for="signup-email"]');
+
+    for (const typed of ["", "not-an-email"]) {
+      await input.fill(typed);
+      await expect(label).toBeVisible();
+      await expect(label).toHaveText("Email address");
+
+      // Measure both in one call: fill() may still be smooth-scrolling the page.
+      // An sr-only label is a 1x1 box that Playwright still counts as visible.
+      const [labelBox, inputBox] = await input.evaluate((el) => {
+        const labelRect = document.querySelector('label[for="signup-email"]')!.getBoundingClientRect();
+        const inputRect = el.getBoundingClientRect();
+        return [labelRect, inputRect].map(({ y, width, height }) => ({ y, width, height }));
+      });
+      expect(labelBox.height).toBeGreaterThanOrEqual(14);
+      expect(labelBox.width).toBeGreaterThanOrEqual(80);
+      expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(inputBox.y + 1);
+      expect(inputBox.y - (labelBox.y + labelBox.height)).toBeLessThanOrEqual(24);
+    }
+
+    await page.getByRole("button", { name: "Notify me" }).click();
+    const alert = page.getByRole("alert").filter({ hasText: "Enter a valid email." });
+    await expect(alert).toHaveText("Enter a valid email.");
+    await expect(alert).toHaveCSS("color", "rgb(196, 61, 112)");
+  }
+
+  await page.goto("/");
+  const placeholderColor = await page
+    .getByLabel("Email address")
+    .evaluate((el) => getComputedStyle(el, "::placeholder").color);
+  expect(placeholderColor).toBe("rgb(154, 106, 69)");
+});
+
+test("signup fine print stays put when the error appears", async ({ page }) => {
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/");
+
+    const finePrint = page.locator("#signup p", { hasText: "No spam." });
+    const input = page.getByLabel("Email address");
+
+    const topBefore = await finePrint.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+
+    await input.fill("not-an-email");
+    await page.getByRole("button", { name: "Notify me" }).click();
+
+    await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
+
+    const topAfter = await finePrint.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+
+    expect(Math.abs(topBefore - topAfter)).toBeLessThanOrEqual(1);
+  }
+});
+
+test("signup error slot is present and empty before any submit", async ({ page }) => {
+  await page.goto("/");
+
+  const errorEl = page.locator("#signup-error");
+  await expect(errorEl).toHaveAttribute("role", "alert");
+  await expect(errorEl).toHaveText("");
+
+  const height = await errorEl.evaluate((el) => el.getBoundingClientRect().height);
+  expect(height).toBeGreaterThanOrEqual(19);
+});
+
+test("every section eyebrow renders in pink-800", async ({ page }) => {
+  await page.goto("/");
+  const ids = ["treats", "gallery", "occasions", "how", "faq", "signup"];
+  for (const id of ids) {
+    if (id === "gallery" && gallery.length === 0) continue;
+    const p = page.locator(`#${id} > div > p`).first();
+    await expect(p).toBeVisible();
+    await expect(p).toHaveCSS("color", "rgb(168, 50, 93)");
+  }
+});
+
+async function submitBadEmail(page: Page, width: number) {
+  await page.setViewportSize({ width, height: 800 });
+  await page.goto("/");
+  await page.getByLabel("Email address").fill("not-an-email");
+  await page.getByRole("button", { name: "Notify me" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Enter a valid email." })).toBeVisible();
+}
+
+test("signup error sits directly under the email field on phones", async ({ page }) => {
+  for (const width of [320, 390]) {
+    await submitBadEmail(page, width);
+
+    // Read all rects in one call so scrolling between reads cannot skew them.
+    const r = await page.evaluate(() => {
+      const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+      return { input: box("#signup-email"), alert: box("#signup-error"), button: box('#signup button[type="submit"]') };
+    });
+
+    expect(r.alert.top).toBeGreaterThanOrEqual(r.input.bottom - 1);
+    expect(r.alert.bottom).toBeLessThanOrEqual(r.button.top + 1);
+    expect(r.button.top).toBeGreaterThan(r.input.bottom);
+  }
+});
+
+test("signup error text lines up with the label", async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await submitBadEmail(page, width);
+
+    // Left edge of the text itself, not the box.
+    const lefts = await page.evaluate(() => {
+      const textLeft = (selector: string) => {
+        const range = document.createRange();
+        range.selectNodeContents(document.querySelector(selector)!);
+        return range.getClientRects()[0].left;
+      };
+      return { label: textLeft('label[for="signup-email"]'), alert: textLeft("#signup-error") };
+    });
+
+    expect(Math.abs(lefts.label - lefts.alert)).toBeLessThanOrEqual(1);
+  }
+});
+
+test("signup email field outline meets 3:1 at rest and turns pink on focus", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Email address");
+  await input.fill("test@example.com");
+  await input.blur();
+  await expect(input).toHaveCSS("border-top-color", "rgb(154, 106, 69)");
+  await input.focus();
+  await expect(input).toHaveCSS("border-top-color", "rgb(232, 93, 138)");
 });
