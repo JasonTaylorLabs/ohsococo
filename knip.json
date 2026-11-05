@@ -1,0 +1,3 @@
+{
+  "$comment": "knip configuration for dead code detection; currently no false positives to ignore"
+}

@@ -9,7 +9,11 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "quality:dead": "knip",
+    "quality:dup": "jscpd src",
+    "quality:cycles": "madge --circular --extensions ts,tsx --ts-config tsconfig.json src",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "next": "16.3.6",
@@ -25,8 +29,12 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "jscpd": "^4",
+    "knip": "^6",
+    "madge": "^8",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "@vitest/coverage-v8": "5.0.3"
   }
 }
