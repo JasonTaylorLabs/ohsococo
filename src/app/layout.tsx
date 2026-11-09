@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { site } from "@/content/site";
-import { asset } from "@/lib/paths";
+import { absoluteUrl, asset } from "@/lib/paths";
 import "./globals.css";
 
 const fredoka = localFont({
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    url: site.url,
+    url: absoluteUrl("/"),
     siteName: site.name,
     locale: "en_US",
     type: "website",
@@ -56,10 +56,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     "@type": "Bakery",
     name: site.name,
     description,
-    url: site.url,
+    url: absoluteUrl("/"),
     email: site.email,
-    image: `${site.url}/og.png`,
-    logo: `${site.url}/logo.svg`,
+    image: absoluteUrl("/og.png"),
+    logo: absoluteUrl("/logo.svg"),
     sameAs: [site.instagram.url],
     address: {
       "@type": "PostalAddress",

@@ -1,0 +1,5 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // jq is a system binary that tests/unit/preview-cleanup.test.ts shells out to, not an npm package.
+  "ignoreBinaries": ["jq"]
+}

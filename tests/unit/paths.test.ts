@@ -110,3 +110,70 @@ describe("subsiteNotFoundPath", () => {
     });
   });
 });
+
+async function loadAbsoluteUrl(base?: string) {
+  vi.resetModules();
+  if (base === undefined) vi.stubEnv("NEXT_PUBLIC_BASE_PATH", undefined as unknown as string);
+  else vi.stubEnv("NEXT_PUBLIC_BASE_PATH", base);
+  return (await import("../../src/lib/paths")).absoluteUrl;
+}
+
+async function loadAbsoluteUrlWithSiteUrl(url: string) {
+  vi.doMock("../../src/content/site", () => ({ site: { url } }));
+  return loadAbsoluteUrl();
+}
+
+describe("absoluteUrl", () => {
+  afterEach(() => vi.doUnmock("../../src/content/site"));
+
+  it("home url carries the trailing slash GitHub Pages serves because of trailingSlash: true", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
+    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("/")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+  });
+
+  it("home url with dev base path is still the production home url", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo/dev");
+    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+    expect(absoluteUrl("/")).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+  });
+
+  it("appends a path that starts with a slash", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
+    expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+  });
+
+  it("adds a leading slash when missing", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo");
+    expect(absoluteUrl("og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+  });
+
+  it("never adds the base path, so dev and previews still advertise production", async () => {
+    const absoluteUrl = await loadAbsoluteUrl("/ohsococo/dev");
+    expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+  });
+
+  it("tolerates a trailing slash in site.url", async () => {
+    const absoluteUrl = await loadAbsoluteUrlWithSiteUrl("https://ohsococo.com/");
+    expect(absoluteUrl()).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("")).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("/")).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("/og.png")).toBe("https://ohsococo.com/og.png");
+  });
+
+  it("tolerates more than one trailing slash in site.url", async () => {
+    const absoluteUrl = await loadAbsoluteUrlWithSiteUrl(
+      "https://jasontaylorlabs.github.io/ohsococo//",
+    );
+    expect(absoluteUrl("/og.png")).toBe("https://jasontaylorlabs.github.io/ohsococo/og.png");
+    expect(absoluteUrl()).toBe("https://jasontaylorlabs.github.io/ohsococo/");
+  });
+
+  it("works when site.url is a bare domain with no trailing slash", async () => {
+    const absoluteUrl = await loadAbsoluteUrlWithSiteUrl("https://ohsococo.com");
+    expect(absoluteUrl()).toBe("https://ohsococo.com/");
+    expect(absoluteUrl("/sitemap.xml")).toBe("https://ohsococo.com/sitemap.xml");
+  });
+});
