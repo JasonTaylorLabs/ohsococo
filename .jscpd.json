@@ -2,5 +2,6 @@
   "minLines": 6,
   "threshold": 0,
   "reporters": ["console"],
-  "format": ["typescript", "tsx"]
+  "format": ["typescript"],
+  "formatsExts": { "typescript": ["ts", "tsx"] }
 }
