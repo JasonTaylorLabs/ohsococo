@@ -16,11 +16,11 @@ export const MESSAGE_MAILTO = "Your email app should open with a ready-to-send n
 export const MESSAGE_SUCCESS = "You're on the list. Drop announcements coming your way.";
 export const MESSAGE_FAILED = "Something went wrong. Try again.";
 
-export function cleanEmail(raw: string): string {
+function cleanEmail(raw: string): string {
   return raw.trim().toLowerCase();
 }
 
-export function isValidEmail(clean: string): boolean {
+function isValidEmail(clean: string): boolean {
   return EMAIL_RE.test(clean);
 }
 
@@ -30,7 +30,7 @@ export function signupMailto(clean: string, to: string): string {
   return `mailto:${to}?subject=${subject}&body=${body}`;
 }
 
-export type SignupStep =
+type SignupStep =
   | { kind: "ignore" }
   | { kind: "invalid" }
   | { kind: "mailto"; email: string }
